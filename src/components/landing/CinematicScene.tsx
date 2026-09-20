@@ -13,12 +13,14 @@ interface CinematicSceneProps {
   onNavigate: (view: AppView) => void;
   onOpenUnlock?: () => void;
   onResetData?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const CinematicScene: React.FC<CinematicSceneProps> = ({
   onNavigate,
   onOpenUnlock,
   onResetData,
+  onOpenAuth,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const backgroundRef = useRef<SceneBackgroundHandle>(null);
@@ -77,34 +79,31 @@ export const CinematicScene: React.FC<CinematicSceneProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 60 FPS lerp interpolation loop for smooth cinematic camera movement
+  // Smooth 60 FPS lerp loop - decoupled from state to eliminate stutter/glitch
   useEffect(() => {
+    let animId: number;
+
     const renderLoop = () => {
       const target = targetFrameRef.current;
       const current = currentLerpFrameRef.current;
 
       const diff = target - current;
-      if (Math.abs(diff) < 0.05) {
+      if (Math.abs(diff) < 0.04) {
         currentLerpFrameRef.current = target;
       } else {
         currentLerpFrameRef.current += diff * CINEMATIC_CONFIG.FRAME_LERP_SPEED;
       }
 
       const frameToDraw = Math.round(currentLerpFrameRef.current);
-      if (frameToDraw !== currentFrameIndex) {
-        setCurrentFrameIndex(frameToDraw);
-      }
+      backgroundRef.current?.drawFrame(frameToDraw);
+      setCurrentFrameIndex(frameToDraw);
 
-      animationFrameRef.current = requestAnimationFrame(renderLoop);
+      animId = requestAnimationFrame(renderLoop);
     };
 
-    animationFrameRef.current = requestAnimationFrame(renderLoop);
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [currentFrameIndex]);
+    animId = requestAnimationFrame(renderLoop);
+    return () => cancelAnimationFrame(animId);
+  }, []);
 
   // Handle scene action clicks (e.g. from the Story Bubble CTA button)
   const handleSceneAction = (action: string) => {
@@ -162,6 +161,7 @@ export const CinematicScene: React.FC<CinematicSceneProps> = ({
           activePillar={getActivePillar()}
           onOpenUnlock={onOpenUnlock}
           onResetData={onResetData}
+          onOpenAuth={onOpenAuth}
         />
 
         {/* 3. Dynamic Negative Space Story Bubble */}

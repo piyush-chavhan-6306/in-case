@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Sparkles, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Sparkles, AlertCircle, ScanText, FolderCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 import { SAMPLE_BANK_STATEMENT_CSV } from '../../utils/sampleData';
 import { parseAndDiscoverCsv } from '../../utils/discoveryEngine';
+import { processUniversalDocument, OcrExtractionResult } from '../../utils/ocrEngine';
 import { InventoryItem } from '../../types';
 
 interface CsvUploaderProps {
@@ -13,6 +14,7 @@ interface CsvUploaderProps {
 export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoading, setIsLoading }) => {
   const [dragActive, setDragActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<{ step: string; percent: number; folder?: string; title?: string } | null>(null);
 
   const processCsvContent = async (content: string, filename: string) => {
     setErrorMessage(null);
@@ -35,16 +37,51 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoadin
     }
   };
 
+  const handleUniversalFile = async (file: File) => {
+    setErrorMessage(null);
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+
+    if (isCsv) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        processCsvContent(text, file.name);
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    // Non-CSV files (PDF, DOC, Bond, LIC, Image, Statement etc): Run In Case OCR & Smart Folder Classifier
+    setIsLoading(true);
+    setOcrStatus({ step: 'Initializing Neural OCR scanner...', percent: 15 });
+
+    try {
+      const { ocrResult, inventoryItem } = await processUniversalDocument(file, (percent, step) => {
+        setOcrStatus({ step, percent, folder: ocrResult?.folder, title: ocrResult?.detectedTitle });
+      });
+
+      setOcrStatus({
+        step: `Identified: ${ocrResult.detectedTitle} → Routed to [${ocrResult.folder}]`,
+        percent: 100,
+        folder: ocrResult.folder,
+        title: ocrResult.detectedTitle,
+      });
+
+      await new Promise((r) => setTimeout(r, 900));
+      onDiscovered([inventoryItem], file.name);
+    } catch (err: any) {
+      console.error('Universal OCR processing failed', err);
+      setErrorMessage(err?.message || 'Failed to process document with OCR. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setOcrStatus(null);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      processCsvContent(text, file.name);
-    };
-    reader.readAsText(file);
+    handleUniversalFile(file);
   };
 
   const handleLoadDemo = () => {
@@ -64,12 +101,7 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoadin
           setDragActive(false);
           const file = e.dataTransfer.files?.[0];
           if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const text = event.target?.result as string;
-              processCsvContent(text, file.name);
-            };
-            reader.readAsText(file);
+            handleUniversalFile(file);
           }
         }}
         style={{
@@ -80,10 +112,11 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoadin
           dragActive ? 'scale-[1.02] ring-4 ring-sky-400/40' : ''
         }`}
       >
+        {/* Universal File Input (accepts CSV, PDF, Images, Bonds, Statements, KYC) */}
         <input
           type="file"
-          id="csv-upload-input"
-          accept=".csv,text/csv"
+          id="universal-upload-input"
+          accept=".csv,.pdf,.png,.jpg,.jpeg,.doc,.docx,text/csv,application/pdf,image/*"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -111,19 +144,19 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoadin
           </div>
 
           <h3 className="font-display font-black text-2xl sm:text-[28px] text-[#1e293b] mb-2.5 tracking-tight leading-snug">
-            Upload Your Bank Statement CSV
+            Upload Statement or Any Document
           </h3>
-          <p className="text-xs sm:text-[13px] text-[#64748b] mb-7 leading-relaxed max-w-md mx-auto font-medium">
-            Drag and drop your 6-month exported statement. In Case runs client-side algorithms to identify recurring insurance, loans, investments, and subscriptions.
+          <p className="text-xs sm:text-[13px] text-[#64748b] mb-6 leading-relaxed max-w-md mx-auto font-medium">
+            Drag and drop a <strong>Bank Statement CSV</strong>, <strong>LIC Bond Certificate</strong>, <strong>Insurance Policy</strong>, or <strong>FD Receipt</strong>. In Case runs Smart OCR to categorize it into the right vault folder and compress it automatically.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
             <label
-              htmlFor="csv-upload-input"
+              htmlFor="universal-upload-input"
               className="w-full sm:w-auto px-6 py-3 rounded-full bg-white hover:bg-[#f8f5f0] active:scale-[0.99] text-[#1e293b] font-bold text-xs sm:text-sm border border-[#dfd6c8] shadow-sm hover:shadow transition flex items-center justify-center space-x-2 cursor-pointer"
             >
-              <FileText className="w-4 h-4 text-[#0ea5e9] stroke-[2.5]" />
-              <span>Choose CSV File</span>
+              <ScanText className="w-4 h-4 text-[#0ea5e9] stroke-[2.5]" />
+              <span>Upload Document or CSV</span>
             </label>
 
             <span className="text-xs text-[#94a3b8] font-bold">or</span>
@@ -140,16 +173,32 @@ export const CsvUploader: React.FC<CsvUploaderProps> = ({ onDiscovered, isLoadin
             </button>
           </div>
 
-          <p className="mt-5 text-[11px] text-[#94a3b8] font-medium tracking-tight">
-            Expected headers: <code className="font-mono text-[#475569] font-semibold">date, description, debit, credit, balance</code>
-          </p>
+          {/* Supported Smart Folder Pills */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-1.5 text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200">Bonds (LIC/SGB)</span>
+            <span className="px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200">Insurance Policies</span>
+            <span className="px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200">Bank Statements</span>
+            <span className="px-2 py-0.5 rounded-md bg-stone-100 border border-stone-200">Mutual Funds / Demat</span>
+          </div>
         </div>
 
+        {/* Dynamic Loading Overlay for CSV Discovery & OCR Routing */}
         {isLoading && (
-          <div className="absolute inset-0 bg-[#fffdfa]/95 backdrop-blur-md rounded-[38px] sm:rounded-[44px] flex flex-col items-center justify-center z-20 animate-in fade-in">
-            <div className="w-12 h-12 border-4 border-[#0ea5e9] border-t-transparent rounded-full animate-spin mb-3 shadow-md" />
-            <span className="text-sm font-extrabold text-[#1e293b]">Running Auto-Discovery Algorithm...</span>
-            <span className="text-xs text-[#64748b] mt-1 font-medium">Normalizing merchant prefixes • Detecting recurrence cadences</span>
+          <div className="absolute inset-0 bg-[#fffdfa]/95 backdrop-blur-md rounded-[38px] sm:rounded-[44px] flex flex-col items-center justify-center z-20 animate-in fade-in p-6">
+            <div className="w-14 h-14 border-4 border-[#0ea5e9] border-t-transparent rounded-full animate-spin mb-4 shadow-md" />
+            <span className="text-base font-extrabold text-[#1e293b]">
+              {ocrStatus ? 'Smart OCR & Folder Routing Active' : 'Running Auto-Discovery Algorithm...'}
+            </span>
+            <span className="text-xs text-[#64748b] mt-1.5 font-medium max-w-sm text-center">
+              {ocrStatus ? ocrStatus.step : 'Normalizing merchant prefixes • Detecting recurrence cadences'}
+            </span>
+
+            {ocrStatus?.folder && (
+              <div className="mt-4 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-300 text-amber-900 font-bold text-xs flex items-center space-x-2 animate-bounce">
+                <FolderCheck className="w-4 h-4 text-amber-600" />
+                <span>Auto-routed to: [{ocrStatus.folder}]</span>
+              </div>
+            )}
           </div>
         )}
       </div>

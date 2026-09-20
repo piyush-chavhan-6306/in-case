@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, Save, ShieldAlert, CheckCircle2, MapPin, Tag } from 'lucide-react';
+import { X, Save, ShieldAlert, CheckCircle2, MapPin, Tag, Upload, FileText, Download, Eye, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { InventoryItem, Category, NomineeStatus, ConfidenceLevel } from '../../types';
+import { compressDocument, decompressDocument, formatFileSize, CompressedDocPayload } from '../../utils/compression';
+import { CompressionModal } from '../common/CompressionModal';
 
 interface ItemEditModalProps {
   item: InventoryItem | null;
@@ -31,6 +33,98 @@ export const ItemEditModal: React.FC<ItemEditModalProps> = ({ item, isOpen, onCl
   const [accountOrPolicyNumber, setAccountOrPolicyNumber] = useState(item.accountOrPolicyNumber || '');
   const [notes, setNotes] = useState(item.notes || '');
 
+  // Compressed Document state
+  const [compressedDoc, setCompressedDoc] = useState<CompressedDocPayload | undefined>(item.compressedDoc);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    mode: 'compressing' | 'decompressing';
+    filename: string;
+    progress: number;
+    statusText: string;
+    originalSize?: number;
+    compressedSize?: number;
+  }>({
+    isOpen: false,
+    mode: 'compressing',
+    filename: '',
+    progress: 0,
+    statusText: '',
+  });
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setModalState({
+      isOpen: true,
+      mode: 'compressing',
+      filename: file.name,
+      progress: 15,
+      statusText: 'Initializing compression engine...',
+      originalSize: file.size,
+    });
+
+    try {
+      const payload = await compressDocument(file, (percent, status) => {
+        setModalState((prev) => ({
+          ...prev,
+          progress: percent,
+          statusText: status,
+          compressedSize: percent > 50 ? Math.round(file.size * 0.45) : undefined,
+        }));
+      });
+
+      // Brief animation dwell
+      await new Promise((r) => setTimeout(r, 600));
+      setCompressedDoc(payload);
+      if (!documentLocation || documentLocation === 'Not specified') {
+        setDocumentLocation(`Attached Document: ${payload.name} (Compressed)`);
+      }
+    } catch (err) {
+      console.error('Document compression failed', err);
+      alert('Failed to compress document. Please try a different file.');
+    } finally {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+    }
+  };
+
+  const handleViewOrDownload = async () => {
+    if (!compressedDoc) return;
+
+    setModalState({
+      isOpen: true,
+      mode: 'decompressing',
+      filename: compressedDoc.name,
+      progress: 20,
+      statusText: 'Reading compressed chunks...',
+      originalSize: compressedDoc.originalSize,
+      compressedSize: compressedDoc.compressedSize,
+    });
+
+    try {
+      const { blobUrl } = await decompressDocument(compressedDoc, (percent, status) => {
+        setModalState((prev) => ({
+          ...prev,
+          progress: percent,
+          statusText: status,
+        }));
+      });
+
+      await new Promise((r) => setTimeout(r, 500));
+      // Open decompressed blob in new tab or trigger download
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      console.error('Decompression failed', err);
+      alert('Failed to decompress document.');
+    } finally {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+    }
+  };
+
+  const handleRemoveDoc = () => {
+    setCompressedDoc(undefined);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -44,6 +138,7 @@ export const ItemEditModal: React.FC<ItemEditModalProps> = ({ item, isOpen, onCl
       documentLocation: documentLocation.trim() || 'Not specified',
       accountOrPolicyNumber: accountOrPolicyNumber.trim(),
       notes: notes.trim(),
+      compressedDoc,
     });
     onClose();
   };
@@ -185,6 +280,74 @@ export const ItemEditModal: React.FC<ItemEditModalProps> = ({ item, isOpen, onCl
             />
           </div>
 
+          {/* Compressed Document Attachment Box */}
+          <div className="p-4 rounded-2xl bg-amber-50/50 border-2 border-dashed border-amber-200/90">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-900 flex items-center space-x-1.5">
+                <FileText className="w-4 h-4 text-amber-600" />
+                <span>Encrypted Document Attachment</span>
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                GZIP Compressed
+              </span>
+            </div>
+
+            {compressedDoc ? (
+              <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-200 shadow-xs">
+                <div className="flex items-center space-x-3 overflow-hidden">
+                  <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="truncate">
+                    <p className="text-xs font-bold text-stone-800 truncate">{compressedDoc.name}</p>
+                    <p className="text-[10px] font-mono text-stone-500">
+                      {formatFileSize(compressedDoc.originalSize)} →{' '}
+                      <span className="text-amber-700 font-bold">{formatFileSize(compressedDoc.compressedSize)}</span>
+                      {' '}(saved {Math.round(((compressedDoc.originalSize - compressedDoc.compressedSize) / (compressedDoc.originalSize || 1)) * 100)}%)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleViewOrDownload}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs flex items-center space-x-1.5 shadow-sm transition"
+                    title="Decompress & Open Document"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Decompress & View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDoc}
+                    className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition"
+                    title="Remove Document"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="flex flex-col items-center justify-center py-4 px-3 border border-amber-200 rounded-xl bg-white hover:bg-amber-50/40 cursor-pointer transition">
+                  <Upload className="w-6 h-6 text-amber-600 mb-1.5" />
+                  <span className="text-xs font-bold text-stone-700">
+                    Upload & Auto-Compress Document
+                  </span>
+                  <span className="text-[10px] text-stone-400 mt-0.5">
+                    PDF, JPG, PNG or Docs (Compressed client-side before encryption)
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-[#475569] uppercase tracking-wider mb-1.5">
               Policy / Account Reference Number (Optional)
@@ -229,6 +392,17 @@ export const ItemEditModal: React.FC<ItemEditModalProps> = ({ item, isOpen, onCl
           </div>
         </form>
       </div>
+
+      {/* Compression & Decompression Animated Modal */}
+      <CompressionModal
+        isOpen={modalState.isOpen}
+        mode={modalState.mode}
+        filename={modalState.filename}
+        progress={modalState.progress}
+        statusText={modalState.statusText}
+        originalSize={modalState.originalSize}
+        compressedSize={modalState.compressedSize}
+      />
     </div>
   );
 };

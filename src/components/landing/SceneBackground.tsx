@@ -153,14 +153,14 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
 
     // Proactively preload surrounding neighborhood when currentFrame changes
     useEffect(() => {
-      for (let offset = -15; offset <= CINEMATIC_CONFIG.ACTIVE_PRELOAD_WINDOW; offset++) {
+      // Preload aggressive lookahead window in direction of movement
+      for (let offset = -20; offset <= 45; offset++) {
         const target = currentFrame + offset;
         if (target >= 0 && target < CINEMATIC_CONFIG.TOTAL_FRAMES && !imagesRef.current[target]) {
           requestFrame(target);
         }
       }
-      drawFrame(currentFrame);
-    }, [currentFrame, cameraParallax.x, cameraParallax.y]);
+    }, [currentFrame]);
 
     // Handle high-DPI resize
     useEffect(() => {

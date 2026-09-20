@@ -13,6 +13,7 @@ import { UnlockKitModal } from './components/rehearse/UnlockKitModal';
 import { FireDrillModal } from './components/rehearse/FireDrillModal';
 import { ReadinessScoreView } from './components/rehearse/ReadinessScoreView';
 import { EmergencyModeView } from './components/act/EmergencyModeView';
+import { AuthPage } from './components/auth/AuthPage';
 
 import { InventoryItem, VaultData, TrustedShare, DrillRecord } from './types';
 import {
@@ -38,6 +39,7 @@ export function App() {
   const [isUnlocked, setIsUnlocked] = useState(true);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [isFireDrillModalOpen, setIsFireDrillModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [activeRiskFilter, setActiveRiskFilter] = useState<'nominee' | 'doc' | 'confidence' | null>(null);
   const [discoveredFilename, setDiscoveredFilename] = useState('demo_statement_hdfc_sbi.csv');
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
@@ -121,6 +123,7 @@ export function App() {
           }
           onOpenUnlock={() => setIsUnlockModalOpen(true)}
           onResetData={handleResetData}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
         />
       )}
 
@@ -136,6 +139,7 @@ export function App() {
               }}
               onOpenUnlock={() => setIsUnlockModalOpen(true)}
               onResetData={handleResetData}
+              onOpenAuth={() => setIsAuthModalOpen(true)}
             />
 
             {/* The Problem & 4 Pillars Section directly below */}
@@ -204,8 +208,37 @@ export function App() {
         )}
 
         {currentView === 'protect' && (
-          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen pt-24 sm:pt-28 pb-16 px-4 sm:px-8">
-            <div className="max-w-6xl mx-auto">
+          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen">
+            {/* Cinematic hero — reality desk / vault scene */}
+            <div className="relative w-full min-h-[420px] sm:min-h-[520px] flex items-center justify-center pt-24 sm:pt-28 pb-14 px-4 sm:px-8 overflow-hidden">
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <img
+                  src="/reality_desk_bg.png"
+                  alt="Warm home office desk with safe — protect your documents"
+                  className="w-full h-full object-cover object-center scale-[1.02]"
+                />
+                {/* Dark overlay at top for navbar legibility */}
+                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 via-black/20 to-transparent" />
+                {/* Warm fade into page below */}
+                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#fbf8f2] via-[#fbf8f2]/70 to-transparent" />
+              </div>
+
+              {/* Hero Text over image */}
+              <div className="relative z-10 text-center max-w-2xl mx-auto">
+                <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm text-white border border-white/30 text-xs font-black uppercase tracking-wider mb-3 shadow-lg">
+                  <span>🔒 Module 02 — Vault Protection</span>
+                </div>
+                <h1 className="font-display font-black text-4xl sm:text-5xl text-white tracking-tight drop-shadow-lg mb-2">
+                  Protect Your Family's Future
+                </h1>
+                <p className="text-sm sm:text-base text-white/85 font-semibold drop-shadow leading-relaxed">
+                  Encrypt, split, and secure your family's most critical financial documents — accessible only when it truly matters.
+                </p>
+              </div>
+            </div>
+
+            {/* Content below hero */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 pb-16 -mt-8 relative z-10">
               <EncryptVaultView
                 items={items}
                 vault={vault}
@@ -221,40 +254,55 @@ export function App() {
           </div>
         )}
 
+
         {currentView === 'rehearse' && (
           <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen">
-            {/* Cinematic hero with the sunset desk background */}
-            <div className="relative w-full min-h-[340px] sm:min-h-[420px] flex items-end justify-center pt-24 sm:pt-28 pb-10 px-4 sm:px-8 overflow-hidden">
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <img
-                  src="/rehearse_hero_bg.png"
-                  alt="Warm sunset desk scene for rehearsal"
-                  className="w-full h-full object-cover object-center scale-[1.01]"
-                />
-                {/* Gradient blends into warm canvas below */}
-                <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#fbf8f2] via-[#fbf8f2]/60 to-transparent" />
-                <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/40 via-black/15 to-transparent" />
-              </div>
-            </div>
-
-            {/* Content: ReadinessScoreView cards float over gradient */}
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 pb-20 -mt-10 relative z-10">
-              <ReadinessScoreView
-                items={items}
-                drillHistory={drillHistory}
-                onStartDrill={() => setIsFireDrillModalOpen(true)}
-                onProceedToPlaybook={() => {
-                  setCurrentView('emergency');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
-            </div>
+            <ReadinessScoreView
+              items={items}
+              drillHistory={drillHistory}
+              onStartDrill={() => setIsFireDrillModalOpen(true)}
+              onProceedToPlaybook={() => {
+                setCurrentView('emergency');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           </div>
         )}
 
         {currentView === 'emergency' && (
-          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen pt-24 sm:pt-28 pb-16 px-4 sm:px-8">
-            <div className="max-w-6xl mx-auto">
+          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen">
+            {/* Cinematic hero — urgent family scene */}
+            <div className="relative w-full min-h-[420px] sm:min-h-[520px] flex items-center justify-center pt-24 sm:pt-28 pb-14 px-4 sm:px-8 overflow-hidden">
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <img
+                  src="/unlock_family_bg.jpg"
+                  alt="Family emergency readiness scene"
+                  className="w-full h-full object-cover object-center scale-[1.02]"
+                />
+                {/* Urgent warm-red tint overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-orange-900/20 to-transparent" />
+                {/* Dark top overlay for navbar */}
+                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/60 via-black/25 to-transparent" />
+                {/* Warm fade into page below */}
+                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#fbf8f2] via-[#fbf8f2]/70 to-transparent" />
+              </div>
+
+              {/* Hero Text */}
+              <div className="relative z-10 text-center max-w-2xl mx-auto">
+                <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-red-500/20 backdrop-blur-sm text-white border border-red-400/40 text-xs font-black uppercase tracking-wider mb-3 shadow-lg">
+                  <span>🚨 Module 04 — Emergency Action Playbook</span>
+                </div>
+                <h1 className="font-display font-black text-4xl sm:text-5xl text-white tracking-tight drop-shadow-lg mb-2">
+                  Your Family's Safety Net
+                </h1>
+                <p className="text-sm sm:text-base text-white/85 font-semibold drop-shadow leading-relaxed">
+                  Step-by-step playbooks for the first 24 hours, 7 days, and 30 days — guided by grounded AI assistance.
+                </p>
+              </div>
+            </div>
+
+            {/* Content below hero */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 pb-16 -mt-8 relative z-10">
               <EmergencyModeView
                 items={items}
                 onOpenPrintCards={() => setCurrentView('print')}
@@ -266,6 +314,7 @@ export function App() {
             </div>
           </div>
         )}
+
 
         {currentView === 'print' && (
           <EmergencyCardPrint
@@ -290,6 +339,14 @@ export function App() {
         items={items}
         onDrillComplete={handleDrillComplete}
       />
+
+      {/* Pixar-Style Supabase Auth Modal */}
+      {isAuthModalOpen && (
+        <AuthPage
+          onSuccess={() => setIsAuthModalOpen(false)}
+          onClose={() => setIsAuthModalOpen(false)}
+        />
+      )}
 
       {/* Footer */}
       {currentView !== 'print' && (

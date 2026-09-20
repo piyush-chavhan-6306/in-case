@@ -12,9 +12,13 @@ import {
   MapPin,
   Lock,
   Sparkles,
+  Eye,
+  Minimize2,
 } from 'lucide-react';
 import { InventoryItem, Category } from '../../types';
 import { ItemEditModal } from './ItemEditModal';
+import { decompressDocument, formatFileSize, CompressedDocPayload } from '../../utils/compression';
+import { CompressionModal } from '../common/CompressionModal';
 
 interface InventoryListProps {
   items: InventoryItem[];
@@ -37,12 +41,64 @@ export const InventoryList: React.FC<InventoryListProps> = ({
 }) => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | 'All'>('All');
+  const [decompressState, setDecompressState] = useState<{
+    isOpen: boolean;
+    filename: string;
+    progress: number;
+    statusText: string;
+    originalSize?: number;
+    compressedSize?: number;
+  }>({
+    isOpen: false,
+    filename: '',
+    progress: 0,
+    statusText: '',
+  });
+
+  const handleDecompressAndOpen = async (doc: CompressedDocPayload) => {
+    setDecompressState({
+      isOpen: true,
+      filename: doc.name,
+      progress: 25,
+      statusText: 'Locating compressed file chunks...',
+      originalSize: doc.originalSize,
+      compressedSize: doc.compressedSize,
+    });
+
+    try {
+      const { blobUrl } = await decompressDocument(doc, (percent, status) => {
+        setDecompressState((prev) => ({
+          ...prev,
+          progress: percent,
+          statusText: status,
+        }));
+      });
+
+      await new Promise((r) => setTimeout(r, 500));
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      console.error('Failed to decompress document', err);
+      alert('Failed to decompress document.');
+    } finally {
+      setDecompressState((prev) => ({ ...prev, isOpen: false }));
+    }
+  };
 
   // Filter items
   let filteredItems = items;
 
   if (selectedCategory !== 'All') {
-    filteredItems = filteredItems.filter((i) => i.category === selectedCategory);
+    if (selectedCategory === ('Bonds & Debentures' as any)) {
+      filteredItems = filteredItems.filter(
+        (i) =>
+          i.documentLocation?.toLowerCase().includes('bond') ||
+          i.provider?.toLowerCase().includes('lic') ||
+          i.provider?.toLowerCase().includes('bond') ||
+          i.notes?.toLowerCase().includes('bond')
+      );
+    } else {
+      filteredItems = filteredItems.filter((i) => i.category === selectedCategory);
+    }
   }
 
   if (activeRiskFilter === 'nominee') {
@@ -128,7 +184,7 @@ export const InventoryList: React.FC<InventoryListProps> = ({
 
       {/* Category Tabs */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-3 mb-6 scrollbar-none text-xs">
-        {['All', 'Insurance', 'Loan / EMI', 'Investment / SIP', 'Subscription', 'Rent / Utility'].map((cat) => (
+        {['All', 'Bonds & Debentures', 'Insurance', 'Loan / EMI', 'Investment / SIP', 'Subscription', 'Rent / Utility'].map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat as any)}
@@ -221,18 +277,50 @@ export const InventoryList: React.FC<InventoryListProps> = ({
                     )}
                   </div>
 
-                  {/* Document Location */}
+                  {/* Document Location & Smart Folder */}
                   <div className="flex items-start justify-between">
-                    <span className="text-[#64748b] font-medium">Location:</span>
-                    <span
-                      className={`font-semibold max-w-[180px] truncate text-right ${
-                        isDocMissing ? 'text-[#b45309] italic' : 'text-[#334155]'
-                      }`}
-                      title={item.documentLocation || 'Not specified'}
-                    >
-                      {item.documentLocation || 'Not specified'}
-                    </span>
+                    <span className="text-[#64748b] font-medium">Vault Location:</span>
+                    <div className="text-right max-w-[190px]">
+                      {item.documentLocation?.includes('Vault Folder:') ? (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 font-mono text-[10px] font-bold truncate">
+                          📁 {item.documentLocation.replace('Vault Folder:', '').trim()}
+                        </span>
+                      ) : (
+                        <span
+                          className={`font-semibold truncate block ${
+                            isDocMissing ? 'text-[#b45309] italic' : 'text-[#334155]'
+                          }`}
+                          title={item.documentLocation || 'Not specified'}
+                        >
+                          {item.documentLocation || 'Not specified'}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Attached Compressed Document Pill */}
+                  {item.compressedDoc && (
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-300/40">
+                      <div className="flex items-center space-x-1.5 truncate max-w-[170px]">
+                        <FileText className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                        <span className="text-[11px] font-bold text-amber-900 truncate">
+                          {item.compressedDoc.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDecompressAndOpen(item.compressedDoc!);
+                        }}
+                        className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-amber-500 hover:bg-amber-600 text-stone-950 flex items-center space-x-1 shadow-xs transition"
+                        title="Decompress and Open Document"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Decompress</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Policy Number */}
                   {item.accountOrPolicyNumber && (
@@ -327,6 +415,17 @@ export const InventoryList: React.FC<InventoryListProps> = ({
           }}
         />
       )}
+
+      {/* Decompression Animation Modal */}
+      <CompressionModal
+        isOpen={decompressState.isOpen}
+        mode="decompressing"
+        filename={decompressState.filename}
+        progress={decompressState.progress}
+        statusText={decompressState.statusText}
+        originalSize={decompressState.originalSize}
+        compressedSize={decompressState.compressedSize}
+      />
     </div>
   );
 };

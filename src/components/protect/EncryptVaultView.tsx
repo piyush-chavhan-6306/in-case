@@ -13,6 +13,11 @@ import {
   Shield,
   Eye,
   EyeOff,
+  Plus,
+  Trash2,
+  Share2,
+  Download,
+  Send,
 } from 'lucide-react';
 import { InventoryItem, VaultData, TrustedShare } from '../../types';
 import { generateMasterKey, encryptInventory, splitKeyIntoTrustedShares } from '../../utils/crypto';
@@ -37,12 +42,32 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
 }) => {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [personNames, setPersonNames] = useState<[string, string, string]>([
+  const [sharedIndex, setSharedIndex] = useState<number | null>(null);
+  const [personNames, setPersonNames] = useState<string[]>([
     'Spouse (Priya)',
     'Brother / Sibling (Vikram)',
     'Trusted Friend / Family Attorney',
   ]);
   const [showRawKeys, setShowRawKeys] = useState(false);
+
+  // Add new trusted guardian
+  const handleAddPerson = () => {
+    if (personNames.length >= 5) {
+      alert('Maximum 5 trusted guardians allowed for optimal 2-of-N threshold stability.');
+      return;
+    }
+    setPersonNames([...personNames, `Guardian ${personNames.length + 1}`]);
+  };
+
+  // Remove trusted guardian
+  const handleRemovePerson = (idx: number) => {
+    if (personNames.length <= 3) {
+      alert('At least 3 trusted guardians are required to maintain the 2-of-3 threshold security.');
+      return;
+    }
+    const next = personNames.filter((_, i) => i !== idx);
+    setPersonNames(next);
+  };
 
   const handleGenerateAndEncrypt = async () => {
     setIsEncrypting(true);
@@ -54,7 +79,10 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
       const encryptedVault = await encryptInventory(items, key);
 
       // 3. Split master key into 3 Shamir shares (2-of-3 threshold)
-      const generatedShares = await splitKeyIntoTrustedShares(keyHex, personNames);
+      const generatedShares = await splitKeyIntoTrustedShares(
+        keyHex,
+        personNames.slice(0, 3) as [string, string, string]
+      );
 
       // 4. Save encrypted vault and shares to local storage
       saveVault(encryptedVault);
@@ -72,6 +100,40 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
     navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  // Download QR Code image as PNG
+  const handleDownloadQr = (share: TrustedShare) => {
+    if (!share.qrDataUrl) return;
+    const a = document.createElement('a');
+    a.href = share.qrDataUrl;
+    a.download = `IN_CASE_${share.label.replace(/\s+/g, '_')}_QR.png`;
+    a.click();
+  };
+
+  // Native Web Share or WhatsApp direct share
+  const handleNativeShare = async (share: TrustedShare, idx: number) => {
+    const shareMessage = `IN CASE — Emergency Contingency Share for ${share.recipientName}\n\nKeep this offline QR/Hex Share secure. In any emergency, this share can be paired with any other guardian to unlock our family vault.\n\nShare Key:\n${share.shareData}\n\nUnlock portal: in-case.vercel.app`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `IN CASE Emergency Share (${share.label})`,
+          text: shareMessage,
+        });
+        setSharedIndex(idx);
+        setTimeout(() => setSharedIndex(null), 2000);
+        return;
+      } catch {
+        // Fallback to WhatsApp
+      }
+    }
+
+    // Direct WhatsApp share fallback
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+    window.open(waUrl, '_blank');
+    setSharedIndex(idx);
+    setTimeout(() => setSharedIndex(null), 2000);
   };
 
   const isProtected = !!vault && shares.length === 3;
@@ -113,31 +175,55 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
             </p>
           </div>
 
-          {/* Trusted Person Inputs */}
+          {/* Trusted Person Inputs with Add / Delete Controls */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-600">
+              Trusted Family Guardians ({personNames.length})
+            </span>
+            <button
+              type="button"
+              onClick={handleAddPerson}
+              className="px-3.5 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-300 text-xs font-black flex items-center space-x-1.5 transition"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-700" />
+              <span>Add Another Guardian</span>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {['Person A (Primary Guardian)', 'Person B (Secondary Guardian)', 'Person C (Tertiary / Friend)'].map(
-              (label, i) => (
-                <div
-                  key={label}
-                  className="p-4 rounded-2xl bg-[#f6f1e8] hover:bg-[#f1ebe1] border border-[#dfd4c4] text-left transition shadow-2xs"
-                >
-                  <span className="text-[11px] font-black uppercase tracking-wider text-[#0284c7] block mb-1.5">
+            {personNames.map((name, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-2xl bg-[#f6f1e8] hover:bg-[#f1ebe1] border border-[#dfd4c4] text-left transition shadow-2xs relative group"
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#0284c7]">
                     Share {i + 1} Recipient
                   </span>
-                  <input
-                    type="text"
-                    value={personNames[i]}
-                    onChange={(e) => {
-                      const next = [...personNames] as [string, string, string];
-                      next[i] = e.target.value;
-                      setPersonNames(next);
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#dfd4c4] focus:border-[#0ea5e9] text-[#1e293b] text-xs font-semibold focus:outline-none transition shadow-inner"
-                    placeholder={`e.g. Guardian ${i + 1}`}
-                  />
+                  {personNames.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePerson(i)}
+                      className="text-stone-400 hover:text-rose-600 transition p-1"
+                      title="Remove guardian"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-              )
-            )}
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => {
+                    const next = [...personNames];
+                    next[i] = e.target.value;
+                    setPersonNames(next);
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#dfd4c4] focus:border-[#0ea5e9] text-[#1e293b] text-xs font-semibold focus:outline-none transition shadow-inner"
+                  placeholder={`e.g. Guardian ${i + 1}`}
+                />
+              </div>
+            ))}
           </div>
 
           {/* Encrypt Action Button */}
@@ -256,27 +342,55 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
                   </div>
                 </div>
 
-                {/* Copy Action */}
-                <button
-                  onClick={() => handleCopyShare(share.shareData, idx)}
-                  className={`w-full py-2.5 rounded-full text-xs font-bold flex items-center justify-center space-x-2 border transition shadow-2xs ${
-                    copiedIndex === idx
-                      ? 'bg-[#dcfce7] text-[#15803d] border-[#bbf7d0]'
-                      : 'bg-white hover:bg-[#f8f5f0] text-[#1e293b] border-[#dfd6c8]'
-                  }`}
-                >
-                  {copiedIndex === idx ? (
-                    <>
-                      <Check className="w-4 h-4 text-[#16a34a]" />
-                      <span>Share Code Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 text-[#0ea5e9]" />
-                      <span>Copy Share Code</span>
-                    </>
-                  )}
-                </button>
+                {/* Actions: Copy, Download QR, Native/WhatsApp Share */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadQr(share)}
+                      className="py-2 px-3 rounded-xl bg-white hover:bg-stone-50 border border-[#dfd6c8] text-[#1e293b] text-xs font-bold flex items-center justify-center space-x-1.5 transition shadow-2xs"
+                      title="Download QR as PNG"
+                    >
+                      <Download className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Save QR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleNativeShare(share, idx)}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition border shadow-2xs ${
+                        sharedIndex === idx
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                          : 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600'
+                      }`}
+                      title="Share directly via WhatsApp or Web Share"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>{sharedIndex === idx ? 'Shared!' : 'Share QR'}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => handleCopyShare(share.shareData, idx)}
+                    className={`w-full py-2.5 rounded-full text-xs font-bold flex items-center justify-center space-x-2 border transition shadow-2xs ${
+                      copiedIndex === idx
+                        ? 'bg-[#dcfce7] text-[#15803d] border-[#bbf7d0]'
+                        : 'bg-white hover:bg-[#f8f5f0] text-[#1e293b] border-[#dfd6c8]'
+                    }`}
+                  >
+                    {copiedIndex === idx ? (
+                      <>
+                        <Check className="w-4 h-4 text-[#16a34a]" />
+                        <span>Share Code Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-[#0ea5e9]" />
+                        <span>Copy Share Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

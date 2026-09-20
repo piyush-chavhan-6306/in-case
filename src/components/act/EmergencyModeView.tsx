@@ -12,10 +12,15 @@ import {
   ShieldAlert,
   Phone,
   BookOpen,
+  Eye,
+  Download,
+  FolderOpen,
 } from 'lucide-react';
 import { InventoryItem, PlaybookStep, UrgencyLevel } from '../../types';
 import { generatePlaybookSteps } from '../../utils/sampleData';
 import { InCaseCopilot } from './InCaseCopilot';
+import { decompressDocument, formatFileSize, CompressedDocPayload } from '../../utils/compression';
+import { CompressionModal } from '../common/CompressionModal';
 
 interface EmergencyModeViewProps {
   items: InventoryItem[];
@@ -30,6 +35,48 @@ export const EmergencyModeView: React.FC<EmergencyModeViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'NOW' | 'NEXT_7_DAYS' | 'NEXT_30_DAYS' | 'COPILOT'>('NOW');
   const [steps, setSteps] = useState<PlaybookStep[]>(() => generatePlaybookSteps(items));
+  const [decompressState, setDecompressState] = useState<{
+    isOpen: boolean;
+    filename: string;
+    progress: number;
+    statusText: string;
+    originalSize?: number;
+    compressedSize?: number;
+  }>({
+    isOpen: false,
+    filename: '',
+    progress: 0,
+    statusText: '',
+  });
+
+  const handleDecompressAndOpen = async (doc: CompressedDocPayload) => {
+    setDecompressState({
+      isOpen: true,
+      filename: doc.name,
+      progress: 25,
+      statusText: 'Decompressing emergency documentation...',
+      originalSize: doc.originalSize,
+      compressedSize: doc.compressedSize,
+    });
+
+    try {
+      const { blobUrl } = await decompressDocument(doc, (percent, status) => {
+        setDecompressState((prev) => ({
+          ...prev,
+          progress: percent,
+          statusText: status,
+        }));
+      });
+
+      await new Promise((r) => setTimeout(r, 500));
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      console.error('Emergency decompression failed', err);
+      alert('Failed to decompress document.');
+    } finally {
+      setDecompressState((prev) => ({ ...prev, isOpen: false }));
+    }
+  };
 
   const toggleStepCompleted = (id: string) => {
     setSteps((prev) =>
@@ -256,6 +303,43 @@ export const EmergencyModeView: React.FC<EmergencyModeViewProps> = ({
                         {step.contactNotes}
                       </div>
                     )}
+
+                    {/* Linked Compressed Document from Inventory */}
+                    {(() => {
+                      const linkedItem = items.find(
+                        (i) =>
+                          i.compressedDoc &&
+                          (i.provider.toLowerCase().includes(step.targetProvider.toLowerCase()) ||
+                            step.title.toLowerCase().includes(i.provider.toLowerCase()))
+                      );
+                      if (!linkedItem?.compressedDoc) return null;
+                      return (
+                        <div
+                          className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-300/40 flex items-center justify-between"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center space-x-2 truncate">
+                            <FileText className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                            <div className="truncate">
+                              <span className="text-xs font-bold text-amber-950 block truncate">
+                                {linkedItem.compressedDoc.name}
+                              </span>
+                              <span className="text-[10px] text-amber-700 font-mono">
+                                GZIP Compressed ({formatFileSize(linkedItem.compressedDoc.compressedSize)})
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDecompressAndOpen(linkedItem.compressedDoc!)}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold text-xs flex items-center space-x-1.5 shadow-xs transition flex-shrink-0"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Decompress & View Document</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -263,6 +347,17 @@ export const EmergencyModeView: React.FC<EmergencyModeViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Decompress Loading Modal */}
+      <CompressionModal
+        isOpen={decompressState.isOpen}
+        mode="decompressing"
+        filename={decompressState.filename}
+        progress={decompressState.progress}
+        statusText={decompressState.statusText}
+        originalSize={decompressState.originalSize}
+        compressedSize={decompressState.compressedSize}
+      />
     </div>
   );
 };

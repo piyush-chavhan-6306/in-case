@@ -24,6 +24,15 @@ export interface InventoryItem {
   notes?: string;
   accountOrPolicyNumber?: string;
   lastChargedDate?: string;
+  compressedDoc?: {
+    name: string;
+    type: string;
+    originalSize: number;
+    compressedSize: number;
+    dataBase64: string;
+    isCompressed: boolean;
+    uploadedAt: string;
+  };
 }
 
 export interface BankTransaction {

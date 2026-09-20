@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Menu, X, Shield, Lock, Sparkles, Flame, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Heart, Menu, X, Shield, Lock, Sparkles, Flame, AlertTriangle, RotateCcw, User } from 'lucide-react';
 import { AppView } from '../common/Navbar';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface FloatingNavbarProps {
   currentView: AppView;
@@ -8,6 +9,7 @@ interface FloatingNavbarProps {
   activePillar?: number; // 1 = Home, 2 = Discover, 3 = Protect, 4 = Rehearse
   onOpenUnlock?: () => void;
   onResetData?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
@@ -16,7 +18,9 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
   activePillar = 1,
   onOpenUnlock,
   onResetData,
+  onOpenAuth,
 }) => {
+  const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoSettled, setIsLogoSettled] = useState(false);
 
@@ -96,6 +100,32 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
 
         {/* Right: Status & Minimal Glass Menu Button */}
         <div className="flex items-center space-x-2.5 pointer-events-auto">
+          {/* Supabase Pixar Auth Button */}
+          {user ? (
+            <div className="flex items-center space-x-2">
+              <span className="hidden lg:inline-block text-xs font-semibold text-amber-200/90 truncate max-w-[140px] px-2.5 py-1 rounded-full bg-black/30 border border-amber-400/20 backdrop-blur-md">
+                {user.email?.split('@')[0]}
+              </span>
+              <button
+                onClick={() => signOut()}
+                className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 hover:bg-red-500/20 text-stone-200 hover:text-red-300 border border-white/15 backdrop-blur-md transition"
+                title="Sign Out"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            onOpenAuth && (
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-extrabold rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-stone-900 border border-amber-300/40 shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition transform hover:scale-105 active:scale-95"
+              >
+                <User className="w-3.5 h-3.5 text-stone-900" />
+                <span>Sign In</span>
+              </button>
+            )
+          )}
+
           {/* Emergency / Trusted Unlock quick button */}
           {onOpenUnlock && (
             <button
@@ -144,6 +174,28 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
                 <span className="text-xs opacity-60">→</span>
               </button>
             ))}
+
+            {user ? (
+              <div className="flex items-center justify-between px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-400/20 text-xs">
+                <span className="font-semibold text-amber-200 truncate">{user.email}</span>
+                <button
+                  onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
+                  className="text-red-400 hover:text-red-300 font-bold ml-2"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              onOpenAuth && (
+                <button
+                  onClick={() => { onOpenAuth(); setIsMobileMenuOpen(false); }}
+                  className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-stone-900 shadow-md"
+                >
+                  <User className="w-4 h-4 text-stone-900" />
+                  <span>Sign In / Create Account</span>
+                </button>
+              )
+            )}
 
             <div className="pt-3 border-t border-white/10 flex items-center justify-between">
               {onOpenUnlock && (
