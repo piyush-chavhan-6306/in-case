@@ -153,8 +153,9 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
 
     // Proactively preload surrounding neighborhood when currentFrame changes
     useEffect(() => {
-      // Preload aggressive lookahead window in direction of movement
-      for (let offset = -20; offset <= 45; offset++) {
+      // Preload aggressive lookahead window: -30 to +65 frames with forward bias
+      const lookaheadRange = [-10, 1, 2, 3, 4, 5, -20, 10, 15, 20, 25, 30, 40, 50, 65, -30];
+      for (const offset of lookaheadRange) {
         const target = currentFrame + offset;
         if (target >= 0 && target < CINEMATIC_CONFIG.TOTAL_FRAMES && !imagesRef.current[target]) {
           requestFrame(target);
