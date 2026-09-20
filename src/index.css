@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg-primary: #060a14;
+    --color-surface-dark: #0b132b;
+    --color-surface-card: #152144;
+  }
+
+  body {
+    background-color: #060a14;
+    color: #f1f5f9;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #060a14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1c2d5a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}
+
+/* Story Bubble: Warm, organic 3D translucent material with subtle depth and environmental shadow */
+.story-bubble {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 20px 40px -15px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+    0 1px 2px rgba(255, 255, 255, 0.4) inset;
+  border-radius: 36px;
+  position: relative;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.story-bubble:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Floating Frosted Pill Navbar */
+.pill-navbar {
+  background: rgba(20, 24, 33, 0.4);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* 3D Depth Utilities */
+.depth-layer-base {
+  transform: translateZ(0);
+}
+
+.depth-layer-ui {
+  transform: translateZ(20px);
+  will-change: transform;
+}
+
+/* Glassmorphism helpers for other views */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(21, 33, 68, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+/* Print CSS for Emergency Card */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .emergency-card-print {
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    page-break-inside: avoid;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+}
+
+/* ==========================================================================
+   IN CASE Cinematic Logo & Loader Keyframes
+   ========================================================================== */
+
+@keyframes logoEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logoIdleBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.009);
+  }
+}
+
+@keyframes logoLoaderEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logoLoaderBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.008);
+  }
+}
+
+@keyframes taglineReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility animation classes */
+.animate-logo-entrance {
+  animation: logoEntrance 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-logo-idle {
+  animation: logoIdleBreathe 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-logo-loader-entrance {
+  animation: logoLoaderEntrance 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-logo-loader-idle {
+  animation: logoLoaderBreathe 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-tagline-reveal {
+  animation: taglineReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) 300ms forwards;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Responsive reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-logo-entrance,
+  .animate-logo-idle,
+  .animate-logo-loader-entrance,
+  .animate-logo-loader-idle,
+  .animate-tagline-reveal {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    transition: opacity 250ms ease !important;
+  }
+}
+
