@@ -154,6 +154,9 @@ export const CinematicScene: React.FC<CinematicSceneProps> = ({
           }}
         />
 
+        {/* Seamless bottom transition feather gradient into the Problem & Pillars section */}
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-navy-950 via-navy-950/40 to-transparent pointer-events-none z-20" />
+
         {/* 2. Floating Minimal Pill Navbar */}
         <FloatingNavbar
           currentView="landing"

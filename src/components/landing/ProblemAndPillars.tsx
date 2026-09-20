@@ -30,8 +30,8 @@ export const ProblemAndPillars: React.FC<ProblemAndPillarsProps> = ({ onStartKit
             alt="Warm sunset room with boy and dog looking over desk"
             className="w-full h-full object-cover object-center transform scale-[1.01]"
           />
-          {/* Subtle Top & Bottom Gradient Blends */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-navy-950 via-navy-950/60 to-transparent" />
+          {/* Deep Organic Top & Bottom Gradient Blends */}
+          <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-navy-950 via-navy-950/70 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1b1511]/90 via-[#261e17]/50 to-transparent" />
         </div>
 

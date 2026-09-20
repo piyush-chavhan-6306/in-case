@@ -9,7 +9,7 @@ export const StoryFooterPill: React.FC<StoryFooterPillProps> = ({ show }) => {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-6 sm:bottom-8 left-4 sm:left-10 z-30 pointer-events-none select-none animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="absolute bottom-6 sm:bottom-8 left-4 sm:left-10 z-30 pointer-events-none select-none animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center space-x-3 p-1.5 pr-4 rounded-full bg-black/35 backdrop-blur-xl border border-white/25 shadow-xl">
         {/* Character Avatar: Friendly smiling character */}
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-amber-200/50 shadow-inner bg-amber-100 flex-shrink-0">

@@ -13,9 +13,13 @@ export const ScrollIndicator: React.FC<ScrollIndicatorProps> = ({
 }) => {
   const percent = Math.min(100, Math.max(0, Math.round(progress * 100)));
 
+  // Fade out smoothly as user transitions into Section 1 (ProblemAndPillars)
+  const isNearEnd = progress > 0.94;
+  const opacityClass = isNearEnd ? 'opacity-0 pointer-events-none' : 'opacity-100';
+
   return (
     <aside
-      className="fixed right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center pointer-events-none select-none transition-opacity duration-500"
+      className={`absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center pointer-events-none select-none transition-all duration-500 ${opacityClass}`}
       aria-hidden="true"
     >
       {/* Top Label */}
