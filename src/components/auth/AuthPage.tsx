@@ -230,7 +230,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess, onClose }) => {
                 onClick={async () => {
                   setError('');
                   const { error } = await signInWithOAuth('google');
-                  if (error) setError(error.message);
+                  if (error) {
+                    if (error.message?.includes('not enabled') || error.message?.includes('validation_failed')) {
+                      setError('Google OAuth provider is not yet enabled in your Supabase Dashboard. Go to Supabase > Authentication > Providers > Google, paste your Client ID & Secret, and add the redirect URL.');
+                    } else {
+                      setError(error.message);
+                    }
+                  }
                 }}
                 className="py-3 px-3 rounded-2xl bg-white hover:bg-stone-50 border-2 border-stone-200 hover:border-amber-300 text-stone-700 font-bold text-xs flex items-center justify-center space-x-2 shadow-2xs transition active:scale-[0.98]"
               >
@@ -261,7 +267,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onSuccess, onClose }) => {
                 onClick={async () => {
                   setError('');
                   const { error } = await signInWithOAuth('azure');
-                  if (error) setError(error.message);
+                  if (error) {
+                    if (error.message?.includes('not enabled') || error.message?.includes('validation_failed')) {
+                      setError('Microsoft OAuth provider is not yet enabled in your Supabase Dashboard. Go to Supabase > Authentication > Providers > Azure, and paste your Azure Client ID & Secret.');
+                    } else {
+                      setError(error.message);
+                    }
+                  }
                 }}
                 className="py-3 px-3 rounded-2xl bg-white hover:bg-stone-50 border-2 border-stone-200 hover:border-amber-300 text-stone-700 font-bold text-xs flex items-center justify-center space-x-2 shadow-2xs transition active:scale-[0.98]"
               >

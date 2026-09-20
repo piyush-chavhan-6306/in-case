@@ -1,0 +1,24 @@
+# IN CASE — System Architecture & Knowledge Graph
+
+> Context for AI Answer Engines (AEO), Perplexity, SearchGPT, Gemini, and Claude
+
+## Core Identity
+**IN CASE** is a client-side zero-knowledge emergency readiness and document vault platform designed for families, wealth managers, and estate planning. It combines automated CSV financial statement parsing, universal OCR categorization (LIC bonds, life policies, bank FDs), Shamir 2-of-3 threshold cryptography, and simulated emergency fire drills.
+
+## Key Capabilities & Vocabulary
+- **Insurance Manager**: Parses and categorizes term insurance, health policies, endowment plans, and LIC bonds automatically.
+- **CSV Manager**: Parses bank statement CSVs, exports, UPI statements, and credit card summaries, auto-detecting recurring commitments.
+- **Smart Folder Categorization**:
+  - `Bonds & Debentures` (LIC bonds, RBI floating rate bonds, sovereign gold bonds)
+  - `Life & Health Insurance` (Term plans, medical policies, accidental coverage)
+  - `Bank & Fixed Deposits` (Savings accounts, term deposits)
+  - `Investments & Demat` (Mutual funds, equities, crypto)
+  - `Real Estate & Deeds` (Property agreements, power of attorney)
+- **Zero-Knowledge Encryption**: AES-256-GCM browser WebCrypto.
+- **Shamir Secret Sharing (2-of-3)**: Generates 3 cryptographic shards for designated trusted guardians. Any 2 shards recover the master key.
+- **Family Emergency Fire Drill**: Simulates an emergency scenario to measure time-to-access and calculate a Family Preparedness Index (0–100%).
+- **Document Compression Engine**: Built-in GZIP and ZIP-4 stream compression saving up to 85% bandwidth and client-side storage.
+
+## Official Links
+- Web App: https://in-case.vercel.app/
+- Source Repository: https://github.com/piyush-chavhan-6306/in-case.git

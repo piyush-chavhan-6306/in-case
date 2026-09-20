@@ -87,9 +87,15 @@ export const StoryBubble: React.FC<StoryBubbleProps> = ({ scene, onAction, mouse
         </div>
 
         {/* Narrative Title: Friendly, warm, cinematic typography */}
-        <h2 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-[34px] text-stone-900 tracking-tight leading-[1.2] mb-3 transition-colors duration-300">
-          {scene.title}
-        </h2>
+        {scene.id === 1 ? (
+          <h1 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-[34px] text-stone-900 tracking-tight leading-[1.2] mb-3 transition-colors duration-300">
+            {scene.title}
+          </h1>
+        ) : (
+          <h2 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-[34px] text-stone-900 tracking-tight leading-[1.2] mb-3 transition-colors duration-300">
+            {scene.title}
+          </h2>
+        )}
 
         {/* Narrative Subtitle: Warm human explanation */}
         <p className="text-stone-700 text-sm sm:text-[15px] lg:text-base leading-relaxed mb-6 font-medium">
