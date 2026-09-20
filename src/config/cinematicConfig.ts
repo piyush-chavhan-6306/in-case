@@ -32,17 +32,22 @@ export const CINEMATIC_CONFIG = {
   // Maximum frame distance to search for a loaded neighbor fallback (guarantees zero flicker)
   NEAREST_NEIGHBOR_SEARCH_LIMIT: 80,
 
-  // Frame file extension — now using high-quality PNG from user-provided zips
-  FRAME_EXTENSION: 'png' as 'jpg' | 'png',
+  // Frame file extension — high-performance WebP optimized for instant streaming & 60fps canvas render
+  FRAME_EXTENSION: 'webp' as 'webp' | 'jpg' | 'png',
 };
 
+// Supabase Storage CDN Base URL for the 1,200 cinematic frames
+export const SUPABASE_FRAMES_CDN = 
+  import.meta.env.VITE_FRAMES_BASE_URL ||
+  'https://zvrozvsmggujrodnxstj.supabase.co/storage/v1/object/public/frames';
+
 /**
- * Returns the path to a specific cinematic frame asset
+ * Returns the path or CDN URL to a specific cinematic frame asset
  */
 export function getFramePath(
   index: number,
-  extension: 'jpg' | 'png' = CINEMATIC_CONFIG.FRAME_EXTENSION
+  extension: 'webp' | 'jpg' | 'png' = CINEMATIC_CONFIG.FRAME_EXTENSION
 ): string {
   const pad = String(index + 1).padStart(4, '0');
-  return `/frames/frame-${pad}.${extension}`;
+  return `${SUPABASE_FRAMES_CDN}/frame-${pad}.${extension}`;
 }

@@ -1,0 +1,9 @@
+.git
+node_modules
+public/frames/**
+public/frames/*
+public/frames
+temp_zip5/**
+temp_zip5
+*.zip
+*.log

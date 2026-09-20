@@ -5,14 +5,9 @@ interface CinematicCanvasProps {
   onStartKit: () => void;
   onOpenUnlock: () => void;
 }
+import { CINEMATIC_CONFIG, getFramePath } from '../../config/cinematicConfig';
 
-const TOTAL_FRAMES = 1960;
-
-// Format frame index to 4-digit filename: 0 -> "frame-0001.jpg", 1959 -> "frame-1960.jpg"
-function getFramePath(index: number): string {
-  const pad = String(index + 1).padStart(4, '0');
-  return `/frames/frame-${pad}.jpg`;
-}
+const TOTAL_FRAMES = CINEMATIC_CONFIG.TOTAL_FRAMES;
 
 interface SceneInfo {
   start: number;
