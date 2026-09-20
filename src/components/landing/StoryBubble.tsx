@@ -37,17 +37,32 @@ export const StoryBubble: React.FC<StoryBubbleProps> = ({ scene, onAction, mouse
     }
   };
 
+  // Keyframe animation for buttery smooth scene transitions
   return (
     <div
-      className={`absolute z-30 transition-all duration-700 ease-out pointer-events-none flex flex-col ${getPositionClasses(
+      key={scene.id}
+      className={`absolute z-30 pointer-events-none flex flex-col ${getPositionClasses(
         scene.bubblePosition
       )}`}
       style={{
         transform: `translate(${scene.bubbleOffsetX || 0}px, ${scene.bubbleOffsetY || 0}px)`,
+        animation: 'bubbleFadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both',
       }}
     >
+      <style>{`
+        @keyframes bubbleFadeIn {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0px) scale(1);
+          }
+        }
+      `}</style>
       <div
-        className={`story-bubble p-6 sm:p-7 lg:p-8 ${scene.bubbleWidth || 'max-w-lg lg:max-w-xl'} shadow-2xl pointer-events-auto select-none`}
+        className={`story-bubble p-6 sm:p-7 lg:p-8 ${scene.bubbleWidth || 'max-w-lg lg:max-w-xl'} shadow-2xl pointer-events-auto select-none backdrop-blur-2xl`}
         style={{
           transform: `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(${scene.bubbleScale || 1})`,
           transformOrigin:
@@ -56,7 +71,7 @@ export const StoryBubble: React.FC<StoryBubbleProps> = ({ scene, onAction, mouse
               : scene.bubbleAlignment === 'center'
               ? 'center center'
               : 'bottom left',
-          transition: 'transform 0.2s cubic-bezier(0.2, 0.8, 0.4, 1), all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'transform 0.4s cubic-bezier(0.2, 0.8, 0.4, 1), box-shadow 0.5s ease',
         }}
       >
         {/* Subtle Organic Nature / Leaf Accent in top-right corner */}

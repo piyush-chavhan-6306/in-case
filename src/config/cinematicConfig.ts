@@ -11,8 +11,8 @@ export const CINEMATIC_CONFIG = {
   // Slower, relaxed scroll pacing ensures every scene and narrative card is clearly visible
   SCROLL_CONTAINER_HEIGHT_VH: 2400,
 
-  // Frame lerp speed (0.01 to 0.5): lower = smoother, heavier cinematic camera glide
-  FRAME_LERP_SPEED: 0.08,
+  // Frame lerp speed (0.01 to 0.5): 0.14 provides immediate response with silky camera glide
+  FRAME_LERP_SPEED: 0.14,
 
   // 3D camera micro-parallax & perspective factor
   CAMERA_PARALLAX_FACTOR: 0.04,
