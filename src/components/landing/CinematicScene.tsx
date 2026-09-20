@@ -33,6 +33,7 @@ export const CinematicScene: React.FC<CinematicSceneProps> = ({
 
   const targetFrameRef = useRef<number>(0);
   const currentLerpFrameRef = useRef<number>(0);
+  const lastDrawnFrameRef = useRef<number>(-1);
   const animationFrameRef = useRef<number | null>(null);
 
   // Track normalized mouse position for subtle 3D perspective
@@ -96,7 +97,11 @@ export const CinematicScene: React.FC<CinematicSceneProps> = ({
 
       const frameToDraw = Math.round(currentLerpFrameRef.current);
       backgroundRef.current?.drawFrame(frameToDraw);
-      setCurrentFrameIndex(frameToDraw);
+
+      if (lastDrawnFrameRef.current !== frameToDraw) {
+        lastDrawnFrameRef.current = frameToDraw;
+        setCurrentFrameIndex(frameToDraw);
+      }
 
       animId = requestAnimationFrame(renderLoop);
     };
