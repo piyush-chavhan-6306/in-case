@@ -4,8 +4,8 @@
  */
 
 export const CINEMATIC_CONFIG = {
-  // Total extracted JPEG frames in /public/frames/frame-0001.jpg .. frame-1960.jpg
-  TOTAL_FRAMES: 1960,
+  // Total extracted PNG frames in /public/frames/frame-0001.png .. frame-0900.png
+  TOTAL_FRAMES: 900,
 
   // Total scroll container height in viewport height units (vh)
   // Slower, relaxed scroll pacing ensures every scene and narrative card is clearly visible
@@ -21,20 +21,19 @@ export const CINEMATIC_CONFIG = {
   SCENE_TRANSITION_DURATION_MS: 500,
 
   // Initial eager preload count for instant rendering
-  INITIAL_PRELOAD_COUNT: 45,
+  INITIAL_PRELOAD_COUNT: 30,
 
   // Grid step for milestone preloading across entire film
-  PRELOAD_GRID_STEP: 12,
+  PRELOAD_GRID_STEP: 8,
 
   // Local window around current frame to preload while scrolling
-  ACTIVE_PRELOAD_WINDOW: 30,
+  ACTIVE_PRELOAD_WINDOW: 25,
 
   // Maximum frame distance to search for a loaded neighbor fallback (guarantees zero flicker)
-  NEAREST_NEIGHBOR_SEARCH_LIMIT: 120,
+  NEAREST_NEIGHBOR_SEARCH_LIMIT: 60,
 
-  // Frame file extension ('jpg' or 'png')
-  // Ready to switch to 'png' with a single toggle when user finishes PNG export
-  FRAME_EXTENSION: 'jpg' as 'jpg' | 'png',
+  // Frame file extension — now using high-quality PNG from user-provided zips
+  FRAME_EXTENSION: 'png' as 'jpg' | 'png',
 };
 
 /**
