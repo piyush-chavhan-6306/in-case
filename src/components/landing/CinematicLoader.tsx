@@ -112,6 +112,13 @@ export const CinematicLoader: React.FC<CinematicLoaderProps> = ({
         <img
           src={getFramePath(0)}
           alt=""
+          onError={(e) => {
+            // If frame path is 404 on deployment, gracefully fall back to high-res Pixar scene
+            const target = e.currentTarget;
+            if (!target.src.includes('reality_desk_bg.png')) {
+              target.src = '/reality_desk_bg.png';
+            }
+          }}
           className={`w-full h-full object-cover transform transition-all duration-1000 ease-out ${
             isExiting
               ? 'blur-0 scale-100 brightness-100'

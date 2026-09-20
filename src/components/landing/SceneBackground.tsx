@@ -18,6 +18,7 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
     );
     const renderedFrameRef = useRef<number>(-1);
     const loadingQueueRef = useRef<Set<number>>(new Set());
+    const fallbackImgRef = useRef<HTMLImageElement | null>(null);
 
     // Priority frame requester
     const requestFrame = (idx: number): Promise<void> => {
@@ -70,7 +71,19 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
         }
       }
 
-      if (!img) return;
+      // If no animation frames loaded (e.g. deployed without local frame files), draw fallback Pixar background
+      if (!img) {
+        if (!fallbackImgRef.current) {
+          const fallback = new Image();
+          fallback.src = '/reality_desk_bg.png';
+          fallback.onload = () => {
+            fallbackImgRef.current = fallback;
+            drawFrame(frameIdx);
+          };
+          return;
+        }
+        img = fallbackImgRef.current;
+      }
 
       const width = canvas.width;
       const height = canvas.height;
