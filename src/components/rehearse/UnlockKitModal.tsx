@@ -42,23 +42,55 @@ export const UnlockKitModal: React.FC<UnlockKitModalProps> = ({
     }
   };
 
+  // Handle QR image file selection and BarcodeDetector decoding
+  const handleQrFileSelected = async (e: React.ChangeEvent<HTMLInputElement>, fieldNum: 1 | 2) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        if ('BarcodeDetector' in window) {
+          const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+          const img = new Image();
+          img.src = URL.createObjectURL(file);
+          await new Promise((res) => (img.onload = res));
+          const barcodes = await barcodeDetector.detect(img);
+          if (barcodes.length > 0 && barcodes[0].rawValue) {
+            const code = barcodes[0].rawValue.trim();
+            if (fieldNum === 1) setShareInput1(code);
+            else setShareInput2(code);
+            setErrorMessage(null);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('BarcodeDetector error:', err);
+      }
+    }
+  };
+
   const handlePasteOrScan = async (fieldNum: 1 | 2) => {
     try {
       if (navigator?.clipboard?.readText) {
         const text = await navigator.clipboard.readText();
-        if (text && text.trim()) {
+        if (text && text.trim().startsWith('INCASE-SHARE')) {
           if (fieldNum === 1) setShareInput1(text.trim());
           else setShareInput2(text.trim());
+          setErrorMessage(null);
+          return;
+        } else if (text && text.trim()) {
+          if (fieldNum === 1) setShareInput1(text.trim());
+          else setShareInput2(text.trim());
+          setErrorMessage(null);
           return;
         }
       }
     } catch {
       // Clipboard permission denied or unsupported
     }
-    const manual = prompt(`Paste Share ${fieldNum} (hex) or scanned QR string:`);
+    const manual = prompt(`Paste Share ${fieldNum} (hex or scanned text from phone camera):`);
     if (manual && manual.trim()) {
       if (fieldNum === 1) setShareInput1(manual.trim());
       else setShareInput2(manual.trim());
+      setErrorMessage(null);
     }
   };
 
@@ -266,6 +298,35 @@ export const UnlockKitModal: React.FC<UnlockKitModalProps> = ({
               >
                 <QrCode className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+
+          {/* Hidden File Inputs for QR image upload */}
+          <input
+            id="qr-file-1"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleQrFileSelected(e, 1)}
+          />
+          <input
+            id="qr-file-2"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => handleQrFileSelected(e, 2)}
+          />
+
+          {/* How Guardian QR Scanning Works Guide */}
+          <div className="p-3 rounded-2xl bg-[#faf4ec] border border-[#ebdccb] text-xs text-[#786b5f] flex items-start space-x-2.5">
+            <QrCode className="w-4 h-4 text-[#8c521b] shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-[#422e1f] block text-[11px] uppercase tracking-wider">
+                How Scanning Works
+              </span>
+              <p className="text-[11px] leading-relaxed text-[#685a4f]">
+                Every guardian's QR card contains a distinct cryptographic polynomial share. Scan it with any smartphone camera or Google Lens to copy the share code, then paste it here. Any 2 guardian shares instantly recombine to unlock your family vault.
+              </p>
             </div>
           </div>
 
