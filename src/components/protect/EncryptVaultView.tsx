@@ -30,6 +30,7 @@ interface EncryptVaultViewProps {
   onVaultCreated: (vault: VaultData, shares: TrustedShare[]) => void;
   onOpenPrintCards: () => void;
   onProceedToRehearse: () => void;
+  userId?: string;
 }
 
 export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
@@ -39,6 +40,7 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
   onVaultCreated,
   onOpenPrintCards,
   onProceedToRehearse,
+  userId,
 }) => {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -85,8 +87,8 @@ export const EncryptVaultView: React.FC<EncryptVaultViewProps> = ({
       );
 
       // 4. Save encrypted vault and shares to local storage
-      saveVault(encryptedVault);
-      saveShares(generatedShares);
+      saveVault(encryptedVault, userId);
+      saveShares(generatedShares, userId);
 
       onVaultCreated(encryptedVault, generatedShares);
     } catch (err) {

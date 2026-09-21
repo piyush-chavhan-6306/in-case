@@ -10,6 +10,7 @@ interface FireDrillModalProps {
   onClose: () => void;
   items: InventoryItem[];
   onDrillComplete: (record: DrillRecord) => void;
+  userId?: string;
 }
 
 export const FireDrillModal: React.FC<FireDrillModalProps> = ({
@@ -17,6 +18,7 @@ export const FireDrillModal: React.FC<FireDrillModalProps> = ({
   onClose,
   items,
   onDrillComplete,
+  userId,
 }) => {
   if (!isOpen) return null;
 
@@ -97,7 +99,7 @@ export const FireDrillModal: React.FC<FireDrillModalProps> = ({
       accuracyPercent: finalScore,
     };
 
-    recordDrillResult(record);
+    recordDrillResult(record, userId);
     onDrillComplete(record);
 
     // Confetti effect if high score

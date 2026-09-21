@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppView } from './components/common/Navbar';
 import { FloatingNavbar } from './components/landing/FloatingNavbar';
 import { CinematicScene } from './components/landing/CinematicScene';
@@ -14,8 +14,12 @@ import { FireDrillModal } from './components/rehearse/FireDrillModal';
 import { ReadinessScoreView } from './components/rehearse/ReadinessScoreView';
 import { EmergencyModeView } from './components/act/EmergencyModeView';
 import { AuthPage } from './components/auth/AuthPage';
+import { UserDashboard } from './components/dashboard/UserDashboard';
+import { FinancialDocumentsView } from './components/documents/FinancialDocumentsView';
+import { CrisisFinancialManagerView } from './components/manager/CrisisFinancialManagerView';
+import { useAuth } from './contexts/AuthContext';
 
-import { InventoryItem, VaultData, TrustedShare, DrillRecord } from './types';
+import { InventoryItem, VaultData, TrustedShare, DrillRecord, FinancialDocument } from './types';
 import {
   getStoredItems,
   saveItems,
@@ -26,15 +30,22 @@ import {
   getStoredDrills,
   recordDrillResult,
   clearVault,
+  getStoredDocuments,
+  saveDocuments,
+  DEFAULT_SAMPLE_DOCS,
 } from './utils/storage';
 import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY } from './utils/sampleData';
 
 export function App() {
+  const { user } = useAuth();
+  const userId = user?.id;
+
   const [currentView, setCurrentView] = useState<AppView>('landing');
-  const [items, setItems] = useState<InventoryItem[]>(() => getStoredItems());
-  const [vault, setVault] = useState<VaultData | null>(() => getStoredVault());
-  const [shares, setShares] = useState<TrustedShare[]>(() => getStoredShares());
-  const [drillHistory, setDrillHistory] = useState<DrillRecord[]>(() => getStoredDrills());
+  const [items, setItems] = useState<InventoryItem[]>(() => getStoredItems(userId));
+  const [vault, setVault] = useState<VaultData | null>(() => getStoredVault(userId));
+  const [shares, setShares] = useState<TrustedShare[]>(() => getStoredShares(userId));
+  const [drillHistory, setDrillHistory] = useState<DrillRecord[]>(() => getStoredDrills(userId));
+  const [documents, setDocuments] = useState<FinancialDocument[]>(() => getStoredDocuments(userId));
 
   const [isUnlocked, setIsUnlocked] = useState(true);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
@@ -44,28 +55,37 @@ export function App() {
   const [discoveredFilename, setDiscoveredFilename] = useState('demo_statement_hdfc_sbi.csv');
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
 
+  // Synchronize state when user changes (e.g., login or switch account)
+  useEffect(() => {
+    setItems(getStoredItems(userId));
+    setVault(getStoredVault(userId));
+    setShares(getStoredShares(userId));
+    setDrillHistory(getStoredDrills(userId));
+    setDocuments(getStoredDocuments(userId));
+  }, [userId]);
+
   // Sync items to storage
   const handleUpdateItem = (updated: InventoryItem) => {
     const next = items.map((i) => (i.id === updated.id ? updated : i));
     setItems(next);
-    saveItems(next);
+    saveItems(next, userId);
   };
 
   const handleDeleteItem = (id: string) => {
     const next = items.filter((i) => i.id !== id);
     setItems(next);
-    saveItems(next);
+    saveItems(next, userId);
   };
 
   const handleAddItem = (newItem: InventoryItem) => {
     const next = [newItem, ...items];
     setItems(next);
-    saveItems(next);
+    saveItems(next, userId);
   };
 
   const handleDiscovered = (discoveredItems: InventoryItem[], filename: string) => {
     setItems(discoveredItems);
-    saveItems(discoveredItems);
+    saveItems(discoveredItems, userId);
     setDiscoveredFilename(filename);
     setCurrentView('discover');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -74,11 +94,13 @@ export function App() {
   const handleVaultCreated = (newVault: VaultData, newShares: TrustedShare[]) => {
     setVault(newVault);
     setShares(newShares);
+    saveVault(newVault, userId);
+    saveShares(newShares, userId);
   };
 
   const handleUnlocked = (decryptedItems: InventoryItem[]) => {
     setItems(decryptedItems);
-    saveItems(decryptedItems);
+    saveItems(decryptedItems, userId);
     setIsUnlocked(true);
     // Demo Journey Step 8 -> Step 9: Launch Fire Drill immediately upon unlock!
     setIsFireDrillModalOpen(true);
@@ -87,16 +109,15 @@ export function App() {
   const handleDrillComplete = (record: DrillRecord) => {
     const updated = [record, ...drillHistory];
     setDrillHistory(updated);
-    recordDrillResult(record);
-    setCurrentView('rehearse');
+    recordDrillResult(record, userId);
   };
 
   const handleResetData = () => {
-    clearVault();
+    clearVault(userId);
     setVault(null);
     setShares([]);
     setItems(DEFAULT_DISCOVERED_ITEMS);
-    saveItems(DEFAULT_DISCOVERED_ITEMS);
+    saveItems(DEFAULT_DISCOVERED_ITEMS, userId);
     setDrillHistory(SAMPLE_DRILL_HISTORY);
     setIsUnlocked(true);
     setCurrentView('discover');
@@ -129,6 +150,58 @@ export function App() {
 
       {/* Main View Router */}
       <main className="flex-1">
+        {currentView === 'dashboard' && (
+          <UserDashboard
+            user={user}
+            items={items}
+            vault={vault}
+            shares={shares}
+            drillHistory={drillHistory}
+            documents={documents}
+            onNavigate={(v) => {
+              setCurrentView(v);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onStartDrill={() => setIsFireDrillModalOpen(true)}
+            onOpenUnlock={() => setIsUnlockModalOpen(true)}
+          />
+        )}
+
+        {currentView === 'documents' && (
+          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen">
+            <FinancialDocumentsView
+              documents={documents}
+              onDocumentsChange={(docs) => {
+                setDocuments(docs);
+                saveDocuments(docs, userId);
+              }}
+              userId={userId}
+              onNavigateToManager={() => {
+                setCurrentView('manager');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </div>
+        )}
+
+        {currentView === 'manager' && (
+          <div className="w-full bg-gradient-to-b from-[#fbf8f2] via-[#f7f2ea] to-[#f4eee4] text-stone-800 min-h-screen">
+            <CrisisFinancialManagerView
+              items={items}
+              documents={documents}
+              onNavigateToDocs={() => {
+                setCurrentView('documents');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onNavigateToProtect={() => {
+                setCurrentView('protect');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onLaunchFireDrill={() => setIsFireDrillModalOpen(true)}
+            />
+          </div>
+        )}
+
         {currentView === 'landing' && (
           <div>
             {/* 1,960-Frame Cinematic 3D Scene */}
@@ -243,6 +316,7 @@ export function App() {
                 items={items}
                 vault={vault}
                 shares={shares}
+                userId={userId}
                 onVaultCreated={handleVaultCreated}
                 onOpenPrintCards={() => setCurrentView('print')}
                 onProceedToRehearse={() => {
@@ -337,13 +411,18 @@ export function App() {
         isOpen={isFireDrillModalOpen}
         onClose={() => setIsFireDrillModalOpen(false)}
         items={items}
+        userId={userId}
         onDrillComplete={handleDrillComplete}
       />
 
       {/* Pixar-Style Supabase Auth Modal */}
       {isAuthModalOpen && (
         <AuthPage
-          onSuccess={() => setIsAuthModalOpen(false)}
+          onSuccess={() => {
+            setIsAuthModalOpen(false);
+            setCurrentView('dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           onClose={() => setIsAuthModalOpen(false)}
         />
       )}

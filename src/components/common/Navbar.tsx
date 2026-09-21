@@ -1,7 +1,16 @@
 import React from 'react';
 import { Shield, Lock, Unlock, AlertOctagon, Sparkles, KeyRound, RotateCcw } from 'lucide-react';
 
-export type AppView = 'landing' | 'discover' | 'protect' | 'rehearse' | 'emergency' | 'print';
+export type AppView =
+  | 'landing'
+  | 'dashboard'
+  | 'discover'
+  | 'documents'
+  | 'protect'
+  | 'rehearse'
+  | 'emergency'
+  | 'manager'
+  | 'print';
 
 interface NavbarProps {
   currentView: AppView;

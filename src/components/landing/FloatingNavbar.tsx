@@ -32,19 +32,22 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
   }, []);
 
   const navItems = [
-    { id: 1, label: 'Home', view: 'landing' as AppView },
-    { id: 2, label: 'Discover', view: 'discover' as AppView },
-    { id: 3, label: 'Protect', view: 'protect' as AppView },
-    { id: 4, label: 'Rehearse', view: 'rehearse' as AppView },
+    ...(user ? [{ id: 'dashboard', label: 'Dashboard', view: 'dashboard' as AppView, tag: 'HQ' }] : []),
+    { id: '1', label: 'Story', view: 'landing' as AppView, tag: '01' },
+    { id: '2', label: 'Discover', view: 'discover' as AppView, tag: '02' },
+    { id: '3', label: 'Protect', view: 'protect' as AppView, tag: '03' },
+    { id: '4', label: 'Rehearse', view: 'rehearse' as AppView, tag: '04' },
+    { id: 'documents', label: 'Documents', view: 'documents' as AppView, tag: 'Vault' },
+    { id: 'manager', label: 'Crisis Triage', view: 'manager' as AppView, tag: 'Advisor' },
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 pt-4 sm:pt-6 pointer-events-none no-print">
+    <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 pt-3 sm:pt-5 pointer-events-none no-print">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Left: Official IN CASE Logo with exact proportions */}
         <div className="flex items-center space-x-3 pointer-events-auto">
           <button
-            onClick={() => onNavigate('landing')}
+            onClick={() => onNavigate(user ? 'dashboard' : 'landing')}
             className="flex flex-col items-start text-left group transition-all duration-200 outline-none"
             title="IN CASE — Home"
           >
@@ -70,27 +73,26 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
         </div>
 
         {/* Center: Story Progress Floating Pill Navbar */}
-        <nav className="hidden md:flex items-center space-x-1 p-1 rounded-full bg-black/40 backdrop-blur-xl border border-white/15 shadow-xl pointer-events-auto">
+        <nav className="hidden lg:flex items-center space-x-1 p-1 rounded-full bg-black/45 backdrop-blur-xl border border-white/15 shadow-xl pointer-events-auto">
           {navItems.map((item) => {
-            const isActive =
-              currentView === item.view || (currentView === 'landing' && activePillar === item.id);
+            const isActive = currentView === item.view;
 
             return (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.view)}
-                className={`flex items-center space-x-1.5 px-4 py-1.5 rounded-full text-xs transition-all duration-300 ${
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all duration-200 ${
                   isActive
                     ? 'bg-[#fffdfa] text-[#1e293b] shadow-md font-extrabold scale-[1.02]'
                     : 'text-stone-200 hover:text-white hover:bg-white/10 font-medium'
                 }`}
               >
                 <span
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-black ${
-                    isActive ? 'bg-[#fef3c7] text-[#b45309]' : 'text-stone-300'
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                    isActive ? 'bg-[#fef3c7] text-[#b45309]' : 'bg-white/10 text-stone-300'
                   }`}
                 >
-                  {item.id}
+                  {item.tag}
                 </span>
                 <span>{item.label}</span>
               </button>
@@ -103,12 +105,17 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
           {/* Supabase Pixar Auth Button */}
           {user ? (
             <div className="flex items-center space-x-2">
-              <span className="hidden lg:inline-block text-xs font-semibold text-amber-200/90 truncate max-w-[140px] px-2.5 py-1 rounded-full bg-black/30 border border-amber-400/20 backdrop-blur-md">
-                {user.email?.split('@')[0]}
-              </span>
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className="text-xs font-bold text-amber-200 hover:text-white px-3 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 backdrop-blur-md transition flex items-center space-x-1.5"
+                title="Go to Personal Dashboard"
+              >
+                <User className="w-3.5 h-3.5 text-amber-400" />
+                <span className="truncate max-w-[120px]">{user.email?.split('@')[0]}</span>
+              </button>
               <button
                 onClick={() => signOut()}
-                className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 hover:bg-red-500/20 text-stone-200 hover:text-red-300 border border-white/15 backdrop-blur-md transition"
+                className="px-2.5 py-1.5 text-xs font-bold rounded-full bg-white/10 hover:bg-red-500/20 text-stone-300 hover:text-red-300 border border-white/15 backdrop-blur-md transition"
                 title="Sign Out"
               >
                 Sign Out

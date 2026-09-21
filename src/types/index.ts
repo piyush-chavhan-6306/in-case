@@ -101,3 +101,45 @@ export interface PlaybookStep {
   contactNotes?: string;
   completed: boolean;
 }
+
+export type DocumentCategory =
+  | 'Insurance Policy'
+  | 'Mutual Fund / SIP'
+  | 'Fixed Deposit / Bond'
+  | 'Property / Loan Deed'
+  | 'Bank Account'
+  | 'Will / Legal';
+
+export interface FinancialDocument {
+  id: string;
+  name: string;
+  category: DocumentCategory;
+  provider: string;
+  policyOrAccountNumber?: string;
+  fileType: 'application/pdf' | 'image/png' | 'image/jpeg' | string;
+  originalSize: number;
+  compressedSize: number;
+  dataBase64: string;
+  uploadedAt: string;
+  notes?: string;
+  linkedItemId?: string;
+}
+
+export type CrisisScenario =
+  | 'hospitalization'
+  | 'bereavement'
+  | 'trauma'
+  | 'accident_trauma'
+  | 'critical_illness';
+
+export interface FinancialSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  type: 'critical' | 'warning' | 'recommendation';
+  severity?: 'critical' | 'warning' | 'info';
+  category?: Category | 'Security' | 'Liquidity';
+  actionLabel?: string;
+  impactScore?: number;
+  actionView?: 'discover' | 'protect' | 'documents' | 'rehearse' | 'emergency';
+}
