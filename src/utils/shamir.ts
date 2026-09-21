@@ -47,8 +47,10 @@ export function formatShareCode(share: ShamirShare, threshold: number = 2): stri
 /**
  * Parse a share code back into a ShamirShare object
  */
-export function parseShareCode(code: string): ShamirShare {
-  const trimmed = code.trim().toUpperCase();
+export function parseShareCode(code: string, fallbackX: number = 1): ShamirShare {
+  const trimmed = code.trim().replace(/^0x/i, '');
+
+  // 1. Standard INCASE-SHARE-x-threshold-hex
   const match = trimmed.match(/^INCASE-SHARE-(\d+)-(\d+)-([0-9A-F]+)$/i);
   if (match) {
     return {
@@ -57,8 +59,8 @@ export function parseShareCode(code: string): ShamirShare {
     };
   }
 
-  // Fallback: Check if it's formatted as "x:hexData" or plain hex with prefix
-  const colonMatch = code.trim().match(/^(\d+):([0-9a-fA-F]+)$/);
+  // 2. Colon formatted "x:hexData"
+  const colonMatch = trimmed.match(/^(\d+)[:\-_]([0-9a-fA-F]+)$/);
   if (colonMatch) {
     return {
       x: parseInt(colonMatch[1], 10),
@@ -66,8 +68,16 @@ export function parseShareCode(code: string): ShamirShare {
     };
   }
 
+  // 3. Raw hex string (e.g. 64 characters)
+  if (/^[0-9a-fA-F]{32,}$/i.test(trimmed)) {
+    return {
+      x: fallbackX,
+      data: trimmed.toLowerCase(),
+    };
+  }
+
   throw new Error(
-    'Invalid share format. Expected format: INCASE-SHARE-<shareNumber>-2-<hexData>'
+    'Invalid share format. Expected format: INCASE-SHARE-<shareNumber>-2-<hexData> or valid hex string.'
   );
 }
 
@@ -79,10 +89,12 @@ export function splitKey(keyHex: string, numShares: number = 3, threshold: numbe
     throw new Error('This configuration currently supports 2-of-3 threshold sharing.');
   }
 
+  const cleanKey = keyHex.trim().replace(/^0x/i, '');
+
   // Convert hex to bytes
-  const bytes = new Uint8Array(keyHex.length / 2);
+  const bytes = new Uint8Array(cleanKey.length / 2);
   for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(keyHex.substr(i * 2, 2), 16);
+    bytes[i] = parseInt(cleanKey.substr(i * 2, 2), 16);
   }
 
   const len = bytes.length;
@@ -124,30 +136,63 @@ export function splitKey(keyHex: string, numShares: number = 3, threshold: numbe
 }
 
 /**
- * Reconstruct master key from any 2 valid shares using Lagrange interpolation
+ * Reconstruct master key from any 2 valid shares using Lagrange interpolation,
+ * OR directly return the master key if a valid 64-char key is provided.
  */
 export function combineShares(shareCodes: string[]): string {
-  if (shareCodes.length < 2) {
-    throw new Error('At least 2 shares are required to unlock.');
+  const filtered = shareCodes
+    .map((s) => s.trim().replace(/^0x/i, ''))
+    .filter((s) => s.length > 0);
+
+  if (filtered.length === 0) {
+    throw new Error('At least one key or share is required to unlock.');
   }
 
+  // DIRECT MASTER KEY CHECK:
+  // If the user provided a 64-character hex key (256-bit AES master key) directly,
+  // we do not need polynomial recombination! Return the master key directly.
+  for (const s of filtered) {
+    if (/^[0-9a-fA-F]{64}$/i.test(s)) {
+      // Check if it's not a prefixed share
+      if (!s.toUpperCase().startsWith('INCASE-SHARE')) {
+        // If this is the only input OR explicitly 64-char hex key, treat as Master Key
+        if (filtered.length === 1 || !filtered.some((other) => other.toUpperCase().startsWith('INCASE-SHARE-'))) {
+          // If there are two raw 64-char hex keys, it could be two raw shares.
+          // If only 1 raw 64-char key is provided, it's definitively the Master Key!
+          if (filtered.length === 1) {
+            return s.toLowerCase();
+          }
+        }
+      }
+    }
+  }
+
+  // Parse shares
   const parsedShares: ShamirShare[] = [];
   const seenX = new Set<number>();
 
-  for (const code of shareCodes) {
+  let fallbackIdx = 1;
+  for (const code of filtered) {
     try {
-      const share = parseShareCode(code);
+      // If code doesn't specify x, assign 1 or 2
+      const candidateX = seenX.has(1) ? 2 : (seenX.has(2) ? 3 : fallbackIdx);
+      const share = parseShareCode(code, candidateX);
       if (!seenX.has(share.x)) {
         seenX.add(share.x);
         parsedShares.push(share);
       }
+      fallbackIdx++;
     } catch {
       // Continue searching valid shares
     }
   }
 
   if (parsedShares.length < 2) {
-    throw new Error('Need at least 2 distinct valid shares to reconstruct the key.');
+    // If we have 1 valid parsed share that is 64 hex chars and no other share, check if it's the master key
+    if (parsedShares.length === 1 && parsedShares[0].data.length === 64) {
+      return parsedShares[0].data;
+    }
+    throw new Error('Need at least 2 distinct valid shares (or 1 direct 64-character Master Key) to reconstruct the key.');
   }
 
   const sA = parsedShares[0];

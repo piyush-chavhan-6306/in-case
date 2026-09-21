@@ -143,3 +143,19 @@ export interface FinancialSuggestion {
   impactScore?: number;
   actionView?: 'discover' | 'protect' | 'documents' | 'rehearse' | 'emergency';
 }
+
+export interface UserProfile {
+  id?: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  alternatePhone?: string;
+  city?: string;
+  primaryNomineeName: string;
+  primaryNomineeRelation: string;
+  primaryNomineePhone: string;
+  bloodGroup: string;
+  allergiesAndMedicalNotes?: string;
+  updatedAt: string;
+}
+

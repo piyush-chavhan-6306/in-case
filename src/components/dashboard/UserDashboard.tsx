@@ -20,6 +20,7 @@ import {
   Layers,
   Shield,
   FileCheck,
+  User as UserIcon,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { InventoryItem, VaultData, TrustedShare, DrillRecord, FinancialDocument } from '../../types';
@@ -37,6 +38,7 @@ interface UserDashboardProps {
   onStartDrill: () => void;
   onOpenUnlock: () => void;
   onOpenTour?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const UserDashboard: React.FC<UserDashboardProps> = ({
@@ -50,6 +52,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   onStartDrill,
   onOpenUnlock,
   onOpenTour,
+  onOpenProfile,
 }) => {
   const latestDrill = drillHistory[0] || null;
   const readiness = calculateReadinessScore(items, latestDrill ? latestDrill.score : null);
@@ -101,6 +104,17 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {onOpenProfile && (
+              <button
+                onClick={onOpenProfile}
+                className="flex items-center space-x-1.5 px-4 py-3 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white font-bold text-xs border border-amber-400/30 backdrop-blur-md transition shadow-2xs"
+                title="Manage Family Profile, Nominee & Medical details"
+              >
+                <UserIcon className="w-4 h-4 text-amber-300" />
+                <span>Family Profile</span>
+              </button>
+            )}
+
             {onOpenTour && (
               <button
                 onClick={onOpenTour}

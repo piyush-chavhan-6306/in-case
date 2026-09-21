@@ -19,6 +19,7 @@ import { FinancialDocumentsView } from './components/documents/FinancialDocument
 import { CrisisFinancialManagerView } from './components/manager/CrisisFinancialManagerView';
 import { useAuth } from './contexts/AuthContext';
 import { OnboardingTourModal } from './components/common/OnboardingTourModal';
+import { UserProfileModal } from './components/profile/UserProfileModal';
 
 import { InventoryItem, VaultData, TrustedShare, DrillRecord, FinancialDocument } from './types';
 import {
@@ -39,7 +40,7 @@ import {
 import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY } from './utils/sampleData';
 
 export function App() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const userId = user?.id;
 
   const [currentView, setCurrentView] = useState<AppView>(() => (userId ? 'dashboard' : 'landing'));
@@ -54,11 +55,12 @@ export function App() {
   const [isFireDrillModalOpen, setIsFireDrillModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [activeRiskFilter, setActiveRiskFilter] = useState<'nominee' | 'doc' | 'confidence' | null>(null);
   const [discoveredFilename, setDiscoveredFilename] = useState('demo_statement_hdfc_sbi.csv');
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
 
-  // Synchronize state when user changes (e.g., login or switch account)
+  // Synchronize state when user changes (e.g., login, OAuth redirect, or switch account)
   useEffect(() => {
     setItems(getStoredItems(userId));
     setVault(getStoredVault(userId));
@@ -67,6 +69,11 @@ export function App() {
     setDocuments(getStoredDocuments(userId));
 
     if (userId) {
+      // If user logged in (including via OAuth redirect), switch to dashboard
+      if (currentView === 'landing') {
+        setCurrentView('dashboard');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       // New user tour check
       if (!isTourCompleted(userId)) {
         setIsTourOpen(true);
@@ -161,6 +168,7 @@ export function App() {
           onOpenUnlock={() => setIsUnlockModalOpen(true)}
           onResetData={handleResetData}
           onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
         />
       )}
 
@@ -181,6 +189,7 @@ export function App() {
             onStartDrill={() => setIsFireDrillModalOpen(true)}
             onOpenUnlock={() => setIsUnlockModalOpen(true)}
             onOpenTour={() => setIsTourOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
           />
         )}
 
@@ -422,6 +431,11 @@ export function App() {
         vault={vault}
         shares={shares}
         onUnlocked={handleUnlocked}
+        userId={userId}
+        onNavigateToProtect={() => {
+          setCurrentView('protect');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       <FireDrillModal
@@ -443,6 +457,25 @@ export function App() {
           onClose={() => setIsAuthModalOpen(false)}
         />
       )}
+
+      {/* User Family Profile & Nominee Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={user}
+        vault={vault}
+        shares={shares}
+        onOpenTour={() => {
+          setIsProfileModalOpen(false);
+          setIsTourOpen(true);
+        }}
+        onSignOut={async () => {
+          setIsProfileModalOpen(false);
+          await signOut();
+          setCurrentView('landing');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       {/* Interactive New User Onboarding Tour Modal */}
       <OnboardingTourModal

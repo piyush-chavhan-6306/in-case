@@ -20,6 +20,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for and clean OAuth callback error params from URL
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes('error=') || search.includes('error=')) {
+        const params = new URLSearchParams(hash.replace(/^#/, '') || search);
+        const errDesc = params.get('error_description') || params.get('error');
+        if (errDesc) {
+          console.warn('OAuth authentication returned error:', errDesc);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

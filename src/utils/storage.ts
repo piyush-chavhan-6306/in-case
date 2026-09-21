@@ -1,4 +1,4 @@
-import { VaultData, TrustedShare, InventoryItem, DrillRecord, FinancialDocument } from '../types';
+import { VaultData, TrustedShare, InventoryItem, DrillRecord, FinancialDocument, UserProfile } from '../types';
 import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY } from './sampleData';
 
 function getKey(base: string, userId?: string): string {
@@ -204,3 +204,67 @@ export function setTourCompleted(userId?: string): void {
   if (!userId) return;
   localStorage.setItem(`incase_tour_completed_${userId}`, 'true');
 }
+
+// ----------------------------------------------------
+// USER PROFILE STORAGE
+// ----------------------------------------------------
+export function getStoredProfile(userId?: string, userEmail?: string): UserProfile {
+  const fallbackEmail = userEmail || 'guardian@example.com';
+  const defaultName = fallbackEmail.split('@')[0];
+
+  const defaultProfile: UserProfile = {
+    fullName: defaultName.charAt(0).toUpperCase() + defaultName.slice(1),
+    email: fallbackEmail,
+    phone: '',
+    alternatePhone: '',
+    city: 'Mumbai',
+    primaryNomineeName: '',
+    primaryNomineeRelation: 'Spouse',
+    primaryNomineePhone: '',
+    bloodGroup: 'O+',
+    allergiesAndMedicalNotes: 'No known severe drug allergies.',
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    const raw = localStorage.getItem(getKey('incase_profile', userId));
+    if (raw) {
+      return { ...defaultProfile, ...JSON.parse(raw) };
+    }
+    return defaultProfile;
+  } catch {
+    return defaultProfile;
+  }
+}
+
+export function saveProfile(profile: UserProfile, userId?: string): void {
+  localStorage.setItem(getKey('incase_profile', userId), JSON.stringify(profile));
+}
+
+// ----------------------------------------------------
+// FULL ENCRYPTED JSON BACKUP EXPORT
+// ----------------------------------------------------
+export function exportFamilyBackupJSON(userId?: string, userEmail?: string): void {
+  const backup = {
+    app: 'IN CASE — Family Contingency System',
+    version: '1.0.0',
+    exportedAt: new Date().toISOString(),
+    userId: userId || 'anonymous',
+    profile: getStoredProfile(userId, userEmail),
+    items: getStoredItems(userId),
+    vault: getStoredVault(userId),
+    documents: getStoredDocuments(userId),
+    drillHistory: getStoredDrills(userId),
+    securityNotice: 'Client-side zero-knowledge encrypted vault. Secret shares remain separated across trusted guardians.',
+  };
+
+  const jsonStr = JSON.stringify(backup, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `IN_CASE_Family_Backup_${(userId || 'offline').slice(0, 8)}_${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+

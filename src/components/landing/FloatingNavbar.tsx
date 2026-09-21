@@ -10,6 +10,7 @@ interface FloatingNavbarProps {
   onOpenUnlock?: () => void;
   onResetData?: () => void;
   onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
@@ -19,6 +20,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
   onOpenUnlock,
   onResetData,
   onOpenAuth,
+  onOpenProfile,
 }) => {
   const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -112,11 +114,13 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
           {user ? (
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => onNavigate('dashboard')}
-                className="text-xs font-bold text-amber-200 hover:text-white px-3 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 backdrop-blur-md transition flex items-center space-x-1.5"
-                title="Go to Personal Dashboard"
+                onClick={onOpenProfile || (() => onNavigate('dashboard'))}
+                className="text-xs font-bold text-amber-200 hover:text-white px-3 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/40 backdrop-blur-md transition flex items-center space-x-1.5 shadow-2xs"
+                title="Open Family Profile & Nominee Settings"
               >
-                <User className="w-3.5 h-3.5 text-amber-400" />
+                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-[10px] font-black text-stone-950 flex items-center justify-center">
+                  {(user.email?.[0] || 'U').toUpperCase()}
+                </div>
                 <span className="truncate max-w-[120px]">{user.email?.split('@')[0]}</span>
               </button>
               <button
@@ -192,26 +196,35 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
             ))}
 
             {user ? (
-              <div className="flex items-center justify-between px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-400/20 text-xs">
+              <div className="space-y-2 pt-2 border-t border-white/10">
                 <button
+                  type="button"
                   onClick={() => {
-                    onNavigate('dashboard');
                     setIsMobileMenuOpen(false);
+                    if (onOpenProfile) onOpenProfile();
+                    else onNavigate('dashboard');
                   }}
-                  className="font-semibold text-amber-200 truncate text-left hover:underline"
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 text-amber-200 text-xs font-bold transition"
                 >
-                  {user.email}
+                  <span className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Family Profile & Settings</span>
+                  </span>
+                  <span>⚙️</span>
                 </button>
-                <button
-                  onClick={async () => {
-                    await signOut();
-                    setIsMobileMenuOpen(false);
-                    onNavigate('landing');
-                  }}
-                  className="text-red-400 hover:text-red-300 font-bold ml-2"
-                >
-                  Sign Out
-                </button>
+                <div className="flex items-center justify-between px-4 py-2 rounded-2xl bg-white/5 text-xs">
+                  <span className="text-stone-300 truncate">{user.email}</span>
+                  <button
+                    onClick={async () => {
+                      await signOut();
+                      setIsMobileMenuOpen(false);
+                      onNavigate('landing');
+                    }}
+                    className="text-red-400 hover:text-red-300 font-bold ml-2"
+                  >
+                    Sign Out
+                  </button>
+                </div>
               </div>
             ) : (
               onOpenAuth && (

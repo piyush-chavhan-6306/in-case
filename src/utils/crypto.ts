@@ -146,16 +146,33 @@ export async function splitKeyIntoTrustedShares(
 }
 
 /**
- * Combine any 2 shares to recover the master key hex
+ * Combine any 2 shares to recover the master key hex, or return the master key if directly entered
  */
 export function combineSharesToKeyHex(shares: string[]): string {
   try {
-    const combinedHex = combineShares(shares);
+    // 1. Sanitize inputs: strip whitespace, quotes, and 0x prefix
+    const cleaned = shares
+      .map((s) => (s || '').trim().replace(/^['"]|['"]$/g, '').replace(/^0x/i, ''))
+      .filter((s) => s.length > 0);
+
+    // 2. Direct 64-character master key check
+    for (const keyCandidate of cleaned) {
+      if (/^[0-9a-fA-F]{64}$/i.test(keyCandidate) && !keyCandidate.toUpperCase().startsWith('INCASE-SHARE')) {
+        // If there is only 1 input or explicitly this master key, return directly
+        if (cleaned.length === 1) {
+          return keyCandidate.toLowerCase();
+        }
+      }
+    }
+
+    // 3. Combine shares using Shamir
+    const combinedHex = combineShares(cleaned);
     if (!combinedHex || combinedHex.length < 32) {
       throw new Error('Recombined key is invalid.');
     }
-    return combinedHex;
+    return combinedHex.toLowerCase();
   } catch (err: any) {
     throw new Error('Invalid or incompatible shares provided: ' + (err?.message || 'Check share codes.'));
   }
 }
+
