@@ -11,7 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 const FRAMES_DIR = path.join(__dirname, '..', 'public', 'frames');
-const TOTAL_FRAMES = 1200;
+const TOTAL_FRAMES = 1827; // Full 1,827 frames across all 7 zips
 const CONCURRENCY = 8;
 
 async function getExistingRemoteFiles() {
