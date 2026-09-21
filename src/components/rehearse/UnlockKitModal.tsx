@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { VaultData, TrustedShare, InventoryItem } from '../../types';
 import { combineSharesToKeyHex, importMasterKey, decryptInventory } from '../../utils/crypto';
+import { extractAllSharesFromText, reconstructFromTwoShares } from '../../utils/shamir';
 import { getStoredVault } from '../../utils/storage';
 
 interface UnlockKitModalProps {
@@ -46,9 +47,12 @@ export const UnlockKitModal: React.FC<UnlockKitModalProps> = ({
   const [unlockSuccess, setUnlockSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Detect if user typed or pasted a 64-char master key into any field
-  const isInput1MasterKey = /^[0-9a-fA-F]{64}$/i.test(shareInput1.trim().replace(/^0x/i, ''));
-  const isInput2MasterKey = /^[0-9a-fA-F]{64}$/i.test(shareInput2.trim().replace(/^0x/i, ''));
+  // Detect if user typed or pasted a single 64-char master key into any field (and the other field is empty)
+  const isInput1Clean64 = /^[0-9a-fA-F]{64}$/i.test(shareInput1.trim().replace(/^0x/i, ''));
+  const isInput2Clean64 = /^[0-9a-fA-F]{64}$/i.test(shareInput2.trim().replace(/^0x/i, ''));
+  const isSingleInputMasterKey =
+    (isInput1Clean64 && !shareInput2.trim() && !shareInput1.toUpperCase().includes('INCASE-SHARE')) ||
+    (isInput2Clean64 && !shareInput1.trim() && !shareInput2.toUpperCase().includes('INCASE-SHARE'));
 
   const handleAutoFill = (idxA: number, idxB: number) => {
     if (shares.length > idxA && shares.length > idxB) {
@@ -129,78 +133,162 @@ export const UnlockKitModal: React.FC<UnlockKitModalProps> = ({
       return;
     }
 
-    // 2. Determine key source
-    let keyInputs: string[] = [];
-
-    if (activeTab === 'master_key') {
-      const keyVal = masterKeyInput.trim().replace(/^0x/i, '');
-      if (!keyVal) {
-        setErrorMessage('Please enter or paste your 64-character Master Key.');
-        return;
-      }
-      if (keyVal.length !== 64) {
-        setErrorMessage(`Invalid Master Key length: got ${keyVal.length} characters (must be exactly 64 hex characters / 256 bits).`);
-        return;
-      }
-      keyInputs = [keyVal];
-    } else {
-      // Shamir Shares tab
-      const s1 = shareInput1.trim();
-      const s2 = shareInput2.trim();
-
-      // Smart auto-detect: if user entered a 64-char Master Key in either share field, use it directly!
-      if (isInput1MasterKey) {
-        keyInputs = [s1.replace(/^0x/i, '')];
-      } else if (isInput2MasterKey) {
-        keyInputs = [s2.replace(/^0x/i, '')];
-      } else {
-        if (!s1 && !s2) {
-          setErrorMessage('Please provide any 2 valid Shamir share codes or switch to the Master Key tab.');
-          return;
-        }
-        if (!s1 || !s2) {
-          // If user provided only 1 input and it's 64 chars, it might be the master key
-          const only = (s1 || s2).replace(/^0x/i, '');
-          if (only.length === 64) {
-            keyInputs = [only];
-          } else {
-            setErrorMessage('Please enter BOTH Guardian Share 1 and Guardian Share 2 to reach the 2-of-3 threshold.');
-            return;
-          }
-        } else {
-          if (s1 === s2) {
-            setErrorMessage('Please provide two DIFFERENT shares. Two identical shares cannot unlock the threshold.');
-            return;
-          }
-          keyInputs = [s1, s2];
-        }
-      }
-    }
-
     setIsUnlocking(true);
 
+    const tryDecryptWithKeyHex = async (candidateKeyHex: string): Promise<InventoryItem[] | null> => {
+      try {
+        const cleanHex = candidateKeyHex.trim().replace(/^0x/i, '');
+        if (cleanHex.length !== 64) return null;
+        const cryptoKey = await importMasterKey(cleanHex);
+        const decrypted = await decryptInventory(activeVault, cryptoKey);
+        return decrypted;
+      } catch {
+        return null;
+      }
+    };
+
     try {
-      // 1. Combine shares or import direct master key hex
-      const masterKeyHex = combineSharesToKeyHex(keyInputs);
+      // MASTER KEY TAB
+      if (activeTab === 'master_key') {
+        const keyVal = masterKeyInput.trim().replace(/^0x/i, '').replace(/^['"]|['"]$/g, '');
+        if (!keyVal) {
+          setErrorMessage('Please enter or paste your 64-character Master Key.');
+          setIsUnlocking(false);
+          return;
+        }
+        if (keyVal.length !== 64) {
+          setErrorMessage(`Invalid Master Key length: got ${keyVal.length} characters (must be exactly 64 hex characters / 256 bits).`);
+          setIsUnlocking(false);
+          return;
+        }
+        const decrypted = await tryDecryptWithKeyHex(keyVal);
+        if (decrypted) {
+          setUnlockSuccess(true);
+          setTimeout(() => {
+            onUnlocked(decrypted);
+            onClose();
+          }, 700);
+          return;
+        } else {
+          setErrorMessage('Incorrect Master Key: AES-GCM authentication tag did not match. Please verify your 64-character key.');
+          setIsUnlocking(false);
+          return;
+        }
+      }
 
-      // 2. Import CryptoKey
-      const cryptoKey = await importMasterKey(masterKeyHex);
+      // GUARDIAN SHARES TAB
+      const s1 = shareInput1.trim();
+      const s2 = shareInput2.trim();
+      const combinedText = `${s1}\n${s2}`.trim();
 
-      // 3. Decrypt ciphertext with WebCrypto AES-GCM
-      const decrypted = await decryptInventory(activeVault, cryptoKey);
+      if (!combinedText) {
+        setErrorMessage('Please provide any 2 valid Shamir Guardian shares or use the Quick Test buttons above.');
+        setIsUnlocking(false);
+        return;
+      }
 
-      setUnlockSuccess(true);
-      setTimeout(() => {
-        onUnlocked(decrypted);
-        onClose();
-      }, 700);
+      // Approach A: Extract all formatted INCASE-SHARE-* occurrences from the inputs
+      const extractedShares = extractAllSharesFromText(combinedText);
+      if (extractedShares.length >= 2) {
+        for (let i = 0; i < extractedShares.length; i++) {
+          for (let j = i + 1; j < extractedShares.length; j++) {
+            if (extractedShares[i].x !== extractedShares[j].x) {
+              try {
+                const recoveredHex = reconstructFromTwoShares(extractedShares[i], extractedShares[j]);
+                const decrypted = await tryDecryptWithKeyHex(recoveredHex);
+                if (decrypted) {
+                  setUnlockSuccess(true);
+                  setTimeout(() => {
+                    onUnlocked(decrypted);
+                    onClose();
+                  }, 700);
+                  return;
+                }
+              } catch {
+                // Continue checking pairs
+              }
+            }
+          }
+        }
+      }
+
+      // Approach B: Raw 64-character hex strings (could be raw shares or direct master key)
+      const hexMatches = combinedText.match(/[0-9a-fA-F]{64}/gi) || [];
+      const uniqueHexes = Array.from(new Set(hexMatches.map((h) => h.toLowerCase())));
+
+      // B.1 Test raw hex shares against all 6 index permutations
+      if (uniqueHexes.length >= 2) {
+        const hA = uniqueHexes[0];
+        const hB = uniqueHexes[1];
+        const permutations: [number, number][] = [
+          [1, 2], [2, 1],
+          [2, 3], [3, 2],
+          [1, 3], [3, 1],
+        ];
+        for (const [xA, xB] of permutations) {
+          try {
+            const candidateHex = reconstructFromTwoShares({ x: xA, data: hA }, { x: xB, data: hB });
+            const decrypted = await tryDecryptWithKeyHex(candidateHex);
+            if (decrypted) {
+              setUnlockSuccess(true);
+              setTimeout(() => {
+                onUnlocked(decrypted);
+                onClose();
+              }, 700);
+              return;
+            }
+          } catch {
+            // Permutation test continues
+          }
+        }
+      }
+
+      // B.2 Check if any single hex match was actually the master key
+      for (const h of uniqueHexes) {
+        const decrypted = await tryDecryptWithKeyHex(h);
+        if (decrypted) {
+          setUnlockSuccess(true);
+          setTimeout(() => {
+            onUnlocked(decrypted);
+            onClose();
+          }, 700);
+          return;
+        }
+      }
+
+      // Approach C: Standard combineSharesToKeyHex fallback
+      if (s1 && s2) {
+        try {
+          const fallbackHex = combineSharesToKeyHex([s1, s2]);
+          const decrypted = await tryDecryptWithKeyHex(fallbackHex);
+          if (decrypted) {
+            setUnlockSuccess(true);
+            setTimeout(() => {
+              onUnlocked(decrypted);
+              onClose();
+            }, 700);
+            return;
+          }
+        } catch {
+          // Fall through to error reporting
+        }
+      }
+
+      // If we reached here, no combination decrypted the vault
+      if (!s1 || !s2) {
+        if (uniqueHexes.length === 1) {
+          setErrorMessage('The single key entered did not match this vault. If using Shamir shares, please enter BOTH Share 1 and Share 2.');
+        } else {
+          setErrorMessage('Please enter BOTH Guardian Share 1 and Guardian Share 2 to reach the 2-of-3 threshold.');
+        }
+      } else if (s1 === s2) {
+        setErrorMessage('Please provide two DIFFERENT shares. Two identical shares cannot unlock the threshold.');
+      } else {
+        setErrorMessage('Incorrect keys or mismatched shares: The AES-GCM authentication tag did not match. Please verify your keys.');
+      }
     } catch (err: any) {
       console.error('Decryption failed:', err);
-      setErrorMessage(
-        err?.message?.includes('operation failed') || err?.message?.includes('tag')
-          ? 'Incorrect key or mismatched shares: The AES-GCM authentication tag did not match. Please verify your keys.'
-          : (err?.message || "We couldn't unlock the kit. Check that you've entered any two valid shares or a valid master key.")
-      );
+      setErrorMessage(err?.message || "We couldn't unlock the kit. Check that you've entered any two valid shares or a valid master key.");
     } finally {
       setIsUnlocking(false);
     }
@@ -342,7 +430,7 @@ export const UnlockKitModal: React.FC<UnlockKitModalProps> = ({
                 )}
 
                 {/* Auto-detected master key notice if entered in share box */}
-                {(isInput1MasterKey || isInput2MasterKey) && (
+                {isSingleInputMasterKey && (
                   <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center space-x-2">
                     <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
                     <span className="font-bold">

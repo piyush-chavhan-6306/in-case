@@ -45,13 +45,14 @@ export function formatShareCode(share: ShamirShare, threshold: number = 2): stri
 }
 
 /**
- * Parse a share code back into a ShamirShare object
+ * Parse a share code back into a ShamirShare object, extracting the code
+ * even if surrounded by extra text, labels, or formatting.
  */
 export function parseShareCode(code: string, fallbackX: number = 1): ShamirShare {
-  const trimmed = code.trim().replace(/^0x/i, '');
+  const trimmed = code.trim().replace(/^['"]|['"]$/g, '');
 
-  // 1. Standard INCASE-SHARE-x-threshold-hex
-  const match = trimmed.match(/^INCASE-SHARE-(\d+)-(\d+)-([0-9A-F]+)$/i);
+  // 1. Embedded or standard INCASE-SHARE-x-threshold-hex
+  const match = trimmed.match(/INCASE-SHARE-(\d+)-(\d+)-([0-9a-fA-F]{32,})/i);
   if (match) {
     return {
       x: parseInt(match[1], 10),
@@ -59,8 +60,8 @@ export function parseShareCode(code: string, fallbackX: number = 1): ShamirShare
     };
   }
 
-  // 2. Colon formatted "x:hexData"
-  const colonMatch = trimmed.match(/^(\d+)[:\-_]([0-9a-fA-F]+)$/);
+  // 2. Colon/hyphen formatted "x:hexData"
+  const colonMatch = trimmed.match(/(?:^|[\s,;:])(\d+)[:\-_]([0-9a-fA-F]{32,})/i);
   if (colonMatch) {
     return {
       x: parseInt(colonMatch[1], 10),
@@ -68,11 +69,12 @@ export function parseShareCode(code: string, fallbackX: number = 1): ShamirShare
     };
   }
 
-  // 3. Raw hex string (e.g. 64 characters)
-  if (/^[0-9a-fA-F]{32,}$/i.test(trimmed)) {
+  // 3. Search for any 64-hex-character string (or at least 32 bytes)
+  const hexMatch = trimmed.match(/[0-9a-fA-F]{64}/i) || trimmed.match(/[0-9a-fA-F]{32,}/i);
+  if (hexMatch) {
     return {
       x: fallbackX,
-      data: trimmed.toLowerCase(),
+      data: hexMatch[0].toLowerCase(),
     };
   }
 
@@ -80,6 +82,38 @@ export function parseShareCode(code: string, fallbackX: number = 1): ShamirShare
     'Invalid share format. Expected format: INCASE-SHARE-<shareNumber>-2-<hexData> or valid hex string.'
   );
 }
+
+/**
+ * Extract all valid Shamir shares found anywhere in a text string or combined inputs.
+ */
+export function extractAllSharesFromText(text: string): ShamirShare[] {
+  const results: ShamirShare[] = [];
+  const seenX = new Set<number>();
+
+  // 1. Search all INCASE-SHARE occurrences
+  const regex = /INCASE-SHARE-(\d+)-(\d+)-([0-9a-fA-F]{32,})/gi;
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const x = parseInt(m[1], 10);
+    if (!seenX.has(x)) {
+      seenX.add(x);
+      results.push({ x, data: m[3].toLowerCase() });
+    }
+  }
+
+  // 2. Search all x:hex occurrences
+  const colonRegex = /(?:^|[\s,;:])(\d+)[:\-_]([0-9a-fA-F]{32,})/gi;
+  while ((m = colonRegex.exec(text)) !== null) {
+    const x = parseInt(m[1], 10);
+    if (!seenX.has(x)) {
+      seenX.add(x);
+      results.push({ x, data: m[2].toLowerCase() });
+    }
+  }
+
+  return results;
+}
+
 
 /**
  * Split a 256-bit hex key into 3 shares with threshold 2
@@ -195,11 +229,19 @@ export function combineShares(shareCodes: string[]): string {
     throw new Error('Need at least 2 distinct valid shares (or 1 direct 64-character Master Key) to reconstruct the key.');
   }
 
-  const sA = parsedShares[0];
-  const sB = parsedShares[1];
+  return reconstructFromTwoShares(parsedShares[0], parsedShares[1]);
+}
 
+/**
+ * Reconstruct master key from exactly two ShamirShare objects using Lagrange interpolation in GF(256)
+ */
+export function reconstructFromTwoShares(sA: ShamirShare, sB: ShamirShare): string {
   const xA = sA.x;
   const xB = sB.x;
+
+  if (xA === xB) {
+    throw new Error('Cannot reconstruct key from identical share indices.');
+  }
 
   const hex2Bytes = (hex: string) => {
     const arr = new Uint8Array(hex.length / 2);
@@ -236,3 +278,4 @@ export function combineShares(shareCodes: string[]): string {
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
+

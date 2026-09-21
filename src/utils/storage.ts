@@ -1,5 +1,5 @@
 import { VaultData, TrustedShare, InventoryItem, DrillRecord, FinancialDocument, UserProfile } from '../types';
-import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY } from './sampleData';
+import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY, DEFAULT_SAMPLE_VAULT, DEFAULT_SAMPLE_SHARES } from './sampleData';
 
 function getKey(base: string, userId?: string): string {
   if (userId) {
@@ -14,9 +14,10 @@ function getKey(base: string, userId?: string): string {
 export function getStoredVault(userId?: string): VaultData | null {
   try {
     const raw = localStorage.getItem(getKey('incase_vault', userId));
-    return raw ? JSON.parse(raw) : null;
+    if (raw) return JSON.parse(raw);
+    return userId ? null : DEFAULT_SAMPLE_VAULT;
   } catch {
-    return null;
+    return userId ? null : DEFAULT_SAMPLE_VAULT;
   }
 }
 
@@ -35,9 +36,10 @@ export function clearVault(userId?: string): void {
 export function getStoredShares(userId?: string): TrustedShare[] {
   try {
     const raw = localStorage.getItem(getKey('incase_shares', userId));
-    return raw ? JSON.parse(raw) : [];
+    if (raw) return JSON.parse(raw);
+    return userId ? [] : DEFAULT_SAMPLE_SHARES;
   } catch {
-    return [];
+    return userId ? [] : DEFAULT_SAMPLE_SHARES;
   }
 }
 
