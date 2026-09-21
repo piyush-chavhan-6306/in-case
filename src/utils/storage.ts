@@ -51,9 +51,11 @@ export function saveShares(shares: TrustedShare[], userId?: string): void {
 export function getStoredItems(userId?: string): InventoryItem[] {
   try {
     const raw = localStorage.getItem(getKey('incase_items', userId));
-    return raw ? JSON.parse(raw) : DEFAULT_DISCOVERED_ITEMS;
+    if (raw) return JSON.parse(raw);
+    // Real registered user starts with a completely fresh, clean profile (no fake data)
+    return userId ? [] : DEFAULT_DISCOVERED_ITEMS;
   } catch {
-    return DEFAULT_DISCOVERED_ITEMS;
+    return userId ? [] : DEFAULT_DISCOVERED_ITEMS;
   }
 }
 
@@ -67,9 +69,11 @@ export function saveItems(items: InventoryItem[], userId?: string): void {
 export function getStoredDrills(userId?: string): DrillRecord[] {
   try {
     const raw = localStorage.getItem(getKey('incase_drills', userId));
-    return raw ? JSON.parse(raw) : SAMPLE_DRILL_HISTORY;
+    if (raw) return JSON.parse(raw);
+    // Real registered user starts with empty drill history
+    return userId ? [] : SAMPLE_DRILL_HISTORY;
   } catch {
-    return SAMPLE_DRILL_HISTORY;
+    return userId ? [] : SAMPLE_DRILL_HISTORY;
   }
 }
 
@@ -166,9 +170,11 @@ export const DEFAULT_SAMPLE_DOCS: FinancialDocument[] = [
 export function getStoredDocuments(userId?: string): FinancialDocument[] {
   try {
     const raw = localStorage.getItem(getKey('incase_documents', userId));
-    return raw ? JSON.parse(raw) : DEFAULT_SAMPLE_DOCS;
+    if (raw) return JSON.parse(raw);
+    // Real registered user starts with a clean document vault
+    return userId ? [] : DEFAULT_SAMPLE_DOCS;
   } catch {
-    return DEFAULT_SAMPLE_DOCS;
+    return userId ? [] : DEFAULT_SAMPLE_DOCS;
   }
 }
 
@@ -184,4 +190,17 @@ export function addStoredDocument(doc: FinancialDocument, userId?: string): void
 export function deleteStoredDocument(id: string, userId?: string): void {
   const existing = getStoredDocuments(userId);
   saveDocuments(existing.filter((d) => d.id !== id), userId);
+}
+
+// ----------------------------------------------------
+// ONBOARDING TOUR STATE
+// ----------------------------------------------------
+export function isTourCompleted(userId?: string): boolean {
+  if (!userId) return true;
+  return localStorage.getItem(`incase_tour_completed_${userId}`) === 'true';
+}
+
+export function setTourCompleted(userId?: string): void {
+  if (!userId) return;
+  localStorage.setItem(`incase_tour_completed_${userId}`, 'true');
 }

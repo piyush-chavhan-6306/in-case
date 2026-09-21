@@ -18,6 +18,7 @@ import { UserDashboard } from './components/dashboard/UserDashboard';
 import { FinancialDocumentsView } from './components/documents/FinancialDocumentsView';
 import { CrisisFinancialManagerView } from './components/manager/CrisisFinancialManagerView';
 import { useAuth } from './contexts/AuthContext';
+import { OnboardingTourModal } from './components/common/OnboardingTourModal';
 
 import { InventoryItem, VaultData, TrustedShare, DrillRecord, FinancialDocument } from './types';
 import {
@@ -33,6 +34,7 @@ import {
   getStoredDocuments,
   saveDocuments,
   DEFAULT_SAMPLE_DOCS,
+  isTourCompleted,
 } from './utils/storage';
 import { DEFAULT_DISCOVERED_ITEMS, SAMPLE_DRILL_HISTORY } from './utils/sampleData';
 
@@ -40,7 +42,7 @@ export function App() {
   const { user } = useAuth();
   const userId = user?.id;
 
-  const [currentView, setCurrentView] = useState<AppView>('landing');
+  const [currentView, setCurrentView] = useState<AppView>(() => (userId ? 'dashboard' : 'landing'));
   const [items, setItems] = useState<InventoryItem[]>(() => getStoredItems(userId));
   const [vault, setVault] = useState<VaultData | null>(() => getStoredVault(userId));
   const [shares, setShares] = useState<TrustedShare[]>(() => getStoredShares(userId));
@@ -51,6 +53,7 @@ export function App() {
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [isFireDrillModalOpen, setIsFireDrillModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [activeRiskFilter, setActiveRiskFilter] = useState<'nominee' | 'doc' | 'confidence' | null>(null);
   const [discoveredFilename, setDiscoveredFilename] = useState('demo_statement_hdfc_sbi.csv');
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
@@ -62,6 +65,19 @@ export function App() {
     setShares(getStoredShares(userId));
     setDrillHistory(getStoredDrills(userId));
     setDocuments(getStoredDocuments(userId));
+
+    if (userId) {
+      // New user tour check
+      if (!isTourCompleted(userId)) {
+        setIsTourOpen(true);
+      }
+    } else {
+      // If user logs out, redirect to landing
+      if (currentView === 'dashboard' || currentView === 'documents' || currentView === 'manager') {
+        setCurrentView('landing');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
   }, [userId]);
 
   // Sync items to storage
@@ -164,6 +180,7 @@ export function App() {
             }}
             onStartDrill={() => setIsFireDrillModalOpen(true)}
             onOpenUnlock={() => setIsUnlockModalOpen(true)}
+            onOpenTour={() => setIsTourOpen(true)}
           />
         )}
 
@@ -426,6 +443,17 @@ export function App() {
           onClose={() => setIsAuthModalOpen(false)}
         />
       )}
+
+      {/* Interactive New User Onboarding Tour Modal */}
+      <OnboardingTourModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        userId={userId}
+        onNavigate={(v) => {
+          setCurrentView(v);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       {/* Footer */}
       {currentView !== 'print' && (

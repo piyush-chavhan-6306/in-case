@@ -36,6 +36,7 @@ interface UserDashboardProps {
   onNavigate: (view: AppView) => void;
   onStartDrill: () => void;
   onOpenUnlock: () => void;
+  onOpenTour?: () => void;
 }
 
 export const UserDashboard: React.FC<UserDashboardProps> = ({
@@ -48,6 +49,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
   onNavigate,
   onStartDrill,
   onOpenUnlock,
+  onOpenTour,
 }) => {
   const latestDrill = drillHistory[0] || null;
   const readiness = calculateReadinessScore(items, latestDrill ? latestDrill.score : null);
@@ -97,19 +99,30 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             </p>
           </div>
 
-          {/* Quick Fire Drill Trigger */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+          {/* Quick Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {onOpenTour && (
+              <button
+                onClick={onOpenTour}
+                className="flex items-center space-x-1.5 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-amber-200 hover:text-white font-bold text-xs border border-white/20 backdrop-blur-md transition"
+                title="Start interactive product tour"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Quick Tour</span>
+              </button>
+            )}
+
             <button
               onClick={onStartDrill}
-              className="flex items-center space-x-2 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-stone-950 font-black text-sm shadow-[0_4px_25px_rgba(245,158,11,0.35)] transition transform hover:scale-105 active:scale-95"
+              className="flex items-center space-x-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-stone-950 font-black text-xs shadow-[0_4px_25px_rgba(245,158,11,0.35)] transition transform hover:scale-105 active:scale-95"
             >
-              <Timer className="w-5 h-5 text-stone-950" />
+              <Timer className="w-4 h-4 text-stone-950" />
               <span>Launch Fire Drill (45s)</span>
             </button>
 
             <button
               onClick={() => onNavigate('emergency')}
-              className="flex items-center space-x-2 px-4 py-3.5 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-sm border border-rose-400/30 backdrop-blur-md transition"
+              className="flex items-center space-x-2 px-4 py-3 rounded-2xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-xs border border-rose-400/30 backdrop-blur-md transition"
             >
               <HeartPulse className="w-4 h-4 text-rose-400" />
               <span>Emergency Mode</span>
@@ -160,16 +173,18 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             </div>
             <div className="flex items-baseline space-x-2">
               <span className="text-4xl font-black text-stone-900 font-display">
-                {shares.length > 0 ? shares.length : '3'}
+                {shares.length > 0 ? shares.length : 0}
               </span>
               <span className="text-stone-400 text-sm font-bold">Guardians</span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
-              <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md">
-                2-of-3 Threshold Active
+              <span className={`font-bold px-2 py-0.5 rounded-md ${
+                shares.length > 0 ? 'text-blue-700 bg-blue-50' : 'text-stone-500 bg-stone-100'
+              }`}>
+                {shares.length > 0 ? '2-of-3 Threshold Active' : 'Not Configured'}
               </span>
               <span className="text-stone-400 group-hover:text-stone-700 transition">
-                Manage →
+                {shares.length > 0 ? 'Manage →' : 'Setup →'}
               </span>
             </div>
           </div>
@@ -190,11 +205,13 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
               <span className="text-stone-400 text-sm font-bold">Certificates</span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
-              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-                View &amp; Download Ready
+              <span className={`font-bold px-2 py-0.5 rounded-md ${
+                documents.length > 0 ? 'text-emerald-700 bg-emerald-50' : 'text-stone-500 bg-stone-100'
+              }`}>
+                {documents.length > 0 ? 'View & Download Ready' : 'Vault Empty'}
               </span>
               <span className="text-stone-400 group-hover:text-stone-700 transition">
-                Open →
+                {documents.length > 0 ? 'Open →' : 'Upload →'}
               </span>
             </div>
           </div>
@@ -210,20 +227,56 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
             </div>
             <div className="flex items-baseline space-x-2">
               <span className="text-2xl sm:text-3xl font-black text-stone-900 font-display truncate">
-                {formatCurrency(totalValuation)}
+                {items.length > 0 ? formatCurrency(totalValuation) : '₹0'}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
-              <span className="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md">
-                {items.length} Tracked Accounts
+              <span className={`font-bold px-2 py-0.5 rounded-md ${
+                items.length > 0 ? 'text-purple-700 bg-purple-50' : 'text-stone-500 bg-stone-100'
+              }`}>
+                {items.length > 0 ? `${items.length} Tracked Accounts` : 'Clean Profile'}
               </span>
               <span className="text-stone-400 group-hover:text-stone-700 transition">
-                Inventory →
+                {items.length > 0 ? 'Inventory →' : 'Add First Asset →'}
               </span>
             </div>
           </div>
 
         </div>
+
+        {/* Fresh Profile Onboarding Banner */}
+        {items.length === 0 && (
+          <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 rounded-3xl p-6 sm:p-8 border border-amber-300/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 text-left">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>Clean Slate Active</span>
+              </div>
+              <h3 className="text-xl font-black text-stone-900">Start Your Family Contingency Hub</h3>
+              <p className="text-xs sm:text-sm text-stone-600 max-w-xl leading-relaxed">
+                Your profile is completely fresh with zero dummy records. Upload a statement in Discover or manually log your insurance policies, FDs, and loans to initialize your family inventory.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => onNavigate('discover')}
+                className="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs shadow-md transition transform active:scale-95 flex items-center space-x-1.5"
+              >
+                <span>Open Discover</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              {onOpenTour && (
+                <button
+                  onClick={onOpenTour}
+                  className="px-4 py-3 rounded-xl bg-white hover:bg-stone-50 text-stone-800 font-bold text-xs border border-stone-300 transition"
+                >
+                  Take 1-Min Tour
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Feature Command Center Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

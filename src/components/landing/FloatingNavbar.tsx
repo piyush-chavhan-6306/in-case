@@ -31,15 +31,21 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  const navItems = [
-    ...(user ? [{ id: 'dashboard', label: 'Dashboard', view: 'dashboard' as AppView, tag: 'HQ' }] : []),
-    { id: '1', label: 'Story', view: 'landing' as AppView, tag: '01' },
-    { id: '2', label: 'Discover', view: 'discover' as AppView, tag: '02' },
-    { id: '3', label: 'Protect', view: 'protect' as AppView, tag: '03' },
-    { id: '4', label: 'Rehearse', view: 'rehearse' as AppView, tag: '04' },
-    { id: 'documents', label: 'Documents', view: 'documents' as AppView, tag: 'Vault' },
-    { id: 'manager', label: 'Crisis Triage', view: 'manager' as AppView, tag: 'Advisor' },
-  ];
+  const navItems = user
+    ? [
+        { id: 'dashboard', label: 'Dashboard', view: 'dashboard' as AppView, tag: 'HQ' },
+        { id: 'discover', label: 'Discover', view: 'discover' as AppView, tag: '01' },
+        { id: 'documents', label: 'Documents', view: 'documents' as AppView, tag: 'Vault' },
+        { id: 'protect', label: 'Protect', view: 'protect' as AppView, tag: '02' },
+        { id: 'rehearse', label: 'Rehearse', view: 'rehearse' as AppView, tag: '03' },
+        { id: 'manager', label: 'Crisis Manager', view: 'manager' as AppView, tag: 'Advisor' },
+      ]
+    : [
+        { id: '1', label: 'Story', view: 'landing' as AppView, tag: '01' },
+        { id: '2', label: 'Discover', view: 'discover' as AppView, tag: '02' },
+        { id: '3', label: 'Protect', view: 'protect' as AppView, tag: '03' },
+        { id: '4', label: 'Rehearse', view: 'rehearse' as AppView, tag: '04' },
+      ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 pt-3 sm:pt-5 pointer-events-none no-print">
@@ -114,7 +120,10 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
                 <span className="truncate max-w-[120px]">{user.email?.split('@')[0]}</span>
               </button>
               <button
-                onClick={() => signOut()}
+                onClick={async () => {
+                  await signOut();
+                  onNavigate('landing');
+                }}
                 className="px-2.5 py-1.5 text-xs font-bold rounded-full bg-white/10 hover:bg-red-500/20 text-stone-300 hover:text-red-300 border border-white/15 backdrop-blur-md transition"
                 title="Sign Out"
               >
@@ -184,9 +193,21 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
 
             {user ? (
               <div className="flex items-center justify-between px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-400/20 text-xs">
-                <span className="font-semibold text-amber-200 truncate">{user.email}</span>
                 <button
-                  onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
+                  onClick={() => {
+                    onNavigate('dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="font-semibold text-amber-200 truncate text-left hover:underline"
+                >
+                  {user.email}
+                </button>
+                <button
+                  onClick={async () => {
+                    await signOut();
+                    setIsMobileMenuOpen(false);
+                    onNavigate('landing');
+                  }}
                   className="text-red-400 hover:text-red-300 font-bold ml-2"
                 >
                   Sign Out
