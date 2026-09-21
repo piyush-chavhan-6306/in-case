@@ -4,33 +4,33 @@
  */
 
 export const CINEMATIC_CONFIG = {
-  // Total extracted PNG frames in /public/frames/frame-0001.png .. frame-1200.png
-  TOTAL_FRAMES: 1200,
+  // Total extracted frames across all 7 zips (1,827 frames)
+  TOTAL_FRAMES: 1827,
 
   // Total scroll container height in viewport height units (vh)
-  // Slower, relaxed scroll pacing ensures every scene and narrative card is clearly visible
-  SCROLL_CONTAINER_HEIGHT_VH: 2400,
+  // 3200vh gives relaxed, steady scroll pacing across all 10 narrative scenes
+  SCROLL_CONTAINER_HEIGHT_VH: 3200,
 
-  // Frame lerp speed (0.01 to 0.5): 0.14 provides immediate response with silky camera glide
-  FRAME_LERP_SPEED: 0.14,
+  // Frame lerp speed (0.01 to 0.5): 0.12 provides silky camera glide without feeling disconnected
+  FRAME_LERP_SPEED: 0.12,
 
   // 3D camera micro-parallax & perspective factor
   CAMERA_PARALLAX_FACTOR: 0.04,
 
   // Scene transition fade duration in milliseconds
-  SCENE_TRANSITION_DURATION_MS: 500,
+  SCENE_TRANSITION_DURATION_MS: 450,
 
   // Initial eager preload count for instant rendering
-  INITIAL_PRELOAD_COUNT: 45,
+  INITIAL_PRELOAD_COUNT: 50,
 
   // Grid step for milestone preloading across entire film
   PRELOAD_GRID_STEP: 6,
 
   // Local window around current frame to preload while scrolling
-  ACTIVE_PRELOAD_WINDOW: 35,
+  ACTIVE_PRELOAD_WINDOW: 45,
 
   // Maximum frame distance to search for a loaded neighbor fallback (guarantees zero flicker)
-  NEAREST_NEIGHBOR_SEARCH_LIMIT: 80,
+  NEAREST_NEIGHBOR_SEARCH_LIMIT: 120,
 
   // Frame file extension — high-performance WebP optimized for instant streaming & 60fps canvas render
   FRAME_EXTENSION: 'webp' as 'webp' | 'jpg' | 'png',

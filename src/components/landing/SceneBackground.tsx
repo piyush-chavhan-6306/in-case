@@ -53,7 +53,18 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Find requested frame or the closest loaded frame
+      // Urgently request this frame and forward lookahead window
+      if (!imagesRef.current[frameIdx]) {
+        requestFrame(frameIdx);
+      }
+      for (const fwd of [1, 2, 3, 5, 8, 12, 18, 25, 35]) {
+        const nextIdx = frameIdx + fwd;
+        if (nextIdx < CINEMATIC_CONFIG.TOTAL_FRAMES && !imagesRef.current[nextIdx]) {
+          requestFrame(nextIdx);
+        }
+      }
+
+      // Find requested frame or the closest loaded frame (zero-flicker guarantee)
       let img = imagesRef.current[frameIdx];
       if (!img) {
         for (let offset = 1; offset < CINEMATIC_CONFIG.NEAREST_NEIGHBOR_SEARCH_LIMIT; offset++) {
@@ -71,7 +82,7 @@ export const SceneBackground = forwardRef<SceneBackgroundHandle, SceneBackground
         }
       }
 
-      // If no animation frames loaded (e.g. deployed without local frame files), draw fallback Pixar background
+      // If no animation frames loaded, draw fallback Pixar background
       if (!img) {
         if (!fallbackImgRef.current) {
           const fallback = new Image();
