@@ -49,5 +49,5 @@ export function getFramePath(
   extension: 'webp' | 'jpg' | 'png' = CINEMATIC_CONFIG.FRAME_EXTENSION
 ): string {
   const pad = String(index + 1).padStart(4, '0');
-  return `${SUPABASE_FRAMES_CDN}/frame-${pad}.${extension}`;
+  return `${SUPABASE_FRAMES_CDN}/frame-${pad}.${extension}?v=2`;
 }
